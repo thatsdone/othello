@@ -721,11 +721,11 @@ int search_next_depth(struct session *sp, int myself, int this_turn)
     /*
      * allocate struct depth
      */
-    if ((dp = alloc_depth()) != NULL) {
-        init_depth(dp, predp->depth + 1);
+    if ((dp = allocdepth()) != NULL) {
+        initdepth(dp, predp->depth + 1);
         append(&(sp->player[sp->turn].depth), &(dp->q));
     } else {
-        printf("search_next_depth: alloc_depth() failed.\n");
+        printf("search_next_depth: allocdepth() failed.\n");
         return FAIL;
     }
     /*
@@ -808,11 +808,11 @@ int think_level4(struct session *sp, struct put *p, int color)
     this_turn = color;
     depth = 1;
 #if 0
-    if ((dp = alloc_depth()) != NULL) {
-        init_depth(dp, 1);
+    if ((dp = allocdepth()) != NULL) {
+        initdepth(dp, 1);
         append(&(sp->player[sp->turn].depth), &(dp->q));
     } else {
-        printf("think_level4: alloc_depth() failed.\n");
+        printf("think_level4: allocdepth() failed.\n");
         return FAIL;
     }
 #endif

@@ -269,8 +269,10 @@ extern int think_level4(struct session *, struct put *, int);
 /*
  * othello.c
  */
-extern void init_depth(struct depth *, int);
-extern struct depth *alloc_depth(void);
+extern struct depth *allocdepth(void);
+extern void initdepth(struct depth *, int);
+void freedepth(struct depth *);
+
 #endif /* _OTHELLO_H */
 
 

@@ -84,7 +84,7 @@ void initput(struct put *p)
     return;
 }
 
-void init_depth(struct depth *dp, int depth)
+void initdepth(struct depth *dp, int depth)
 {
     memset(dp, 0x00, sizeof(struct depth));
     INITQ(dp->q);
@@ -94,7 +94,7 @@ void init_depth(struct depth *dp, int depth)
     return;
 }
 
-struct depth *alloc_depth(void)
+struct depth *allocdepth(void)
 {
     struct depth *dp;
     
@@ -102,7 +102,7 @@ struct depth *alloc_depth(void)
     return dp;
 }
 
-void free_depth(struct depth *dp)
+void freedepth(struct depth *dp)
 {
     free((void *)dp);
     return;

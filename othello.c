@@ -771,21 +771,21 @@ struct session *initialize(int argc, char **argv)
             sp->player[PLAYER_FIRST].level  = -1;
             sp->player[PLAYER_SECOND].type  = COMPUTER;
             sp->player[PLAYER_SECOND].level = sp->cfg.level;
-            if ((dp = alloc_depth()) != NULL) {
-                init_depth(dp, 1);
+            if ((dp = allocdepth()) != NULL) {
+                initdepth(dp, 1);
                 append(&(sp->player[PLAYER_SECOND].depth), &(dp->q));
             } else {
-                printf("alloc_depth() failed\n");
+                printf("allocdepth() failed\n");
             }
             
         } else {
             sp->player[PLAYER_FIRST].type   = COMPUTER;
             sp->player[PLAYER_FIRST].level  = sp->cfg.level;
-            if ((dp = alloc_depth()) != NULL) {
-                init_depth(dp, 1);
+            if ((dp = allocdepth()) != NULL) {
+                initdepth(dp, 1);
                 append(&(sp->player[PLAYER_FIRST].depth), &(dp->q));
             } else {
-                printf("alloc_depth() failed\n");
+                printf("allocdepth() failed\n");
             }
             sp->player[PLAYER_SECOND].type  = HUMAN;
             sp->player[PLAYER_SECOND].level = -1;
@@ -794,18 +794,18 @@ struct session *initialize(int argc, char **argv)
         
     case MODE_COMPUTER_COMPUTER:
         sp->player[PLAYER_FIRST].type   = COMPUTER;
-        if ((dp = alloc_depth()) != NULL) {
-            init_depth(dp, 1);
+        if ((dp = allocdepth()) != NULL) {
+            initdepth(dp, 1);
             append(&(sp->player[PLAYER_FIRST].depth), &(dp->q));
         } else {
-            printf("alloc_depth() failed\n");
+            printf("allocdepth() failed\n");
         }
         sp->player[PLAYER_SECOND].type  = COMPUTER;
-        if ((dp = alloc_depth()) != NULL) {
-            init_depth(dp, 1);
+        if ((dp = allocdepth()) != NULL) {
+            initdepth(dp, 1);
             append(&(sp->player[PLAYER_SECOND].depth), &(dp->q));
         } else {
-            printf("alloc_depth() failed\n");
+            printf("allocdepth() failed\n");
         }
         break;
         
