@@ -106,7 +106,8 @@ void finalize(struct board *bp)
 #define COMMAND_HELP       8
 #define COMMAND_BOARD      9
 #define COMMAND_QUIT      10
-#define COMMAND_NULL      11
+#define COMMAND_TREE      11
+#define COMMAND_NULL      12
 
 char *commands[] = {
     "  pass   : pass",
@@ -174,6 +175,9 @@ int getcommand(struct session *sp, struct put *putp)
     } else if (strcmp(bufp, "quit") == 0) {
         return COMMAND_QUIT;
 
+    } else if (strcmp(bufp, "tree") == 0) {
+        return COMMAND_TREE;
+
     } else if (strlen(bufp) == 0) {
         return COMMAND_NULL;
         
@@ -240,13 +244,14 @@ int serve_computer(struct session *sp, int player)
     if (ret == YES) {
         CELL(sp->bd, putp->p.x, putp->p.y) = sp->turn;
     } else {
-        printf("internal inconsistency\n");
+        printf("serve_computer: internal inconsistency: cannot put.(%c%d)\n",
+               putp->p.x + 'A', putp->p.y + 1);
         exit(255);
     }
     dprintf("check_puttable returns %d\n", ret);
     ret = process_put(sp, &(sp->bd), putp, sp->turn);
     if (ret < 0) {
-        printf("internal inconsistency\n");
+        printf("serve_computer: internal inconsistency: proces_put failed.\n");
         exit(255);
     }
     output(&(sp->bd));
@@ -339,6 +344,11 @@ int serve_human(struct session *sp, int player)
         
     case COMMAND_QUIT:
         exit(0);
+        break;
+    case COMMAND_TREE:
+        print_candidate_tree(
+            &(sp->player[OPPOSITE_COLOR(sp->turn)].next_depth),
+            1);;
         break;
         
     case COMMAND_NULL:
