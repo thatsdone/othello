@@ -226,13 +226,13 @@ int initboard(struct board *bp)
             bp->b[x][y] = EMPTY;
         }
     }
-    bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2 - 1] = BLACK;
+    bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2 - 1] = WHITE;
     increment_cell_num();
-    bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2] = BLACK;
+    bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2] = WHITE;
     increment_cell_num();
-    bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2] = WHITE;
+    bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2] = BLACK;
     increment_cell_num();
-    bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2 - 1] = WHITE;
+    bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2 - 1] = BLACK;
     increment_cell_num();
 }
 
