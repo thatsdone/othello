@@ -1,0 +1,55 @@
+TODO LIST of othello
+$Id$
+
+2002/01/29
+  + bug fixes
+    + fix gettable counting bug (probably done!)
+    + fix not showing 'pass' bug
+    + look in infinite loop bug occured on 2002/01/28(bug2)
+      + probably, because of struct put free treatment bug.
+
+  + basic feature enhancement and refinement of the program
+    + sleep a while before computer puts its stone
+    + make a cell pool of struct put or other structures
+    + check and show the end of a game
+    + show current scores of both players
+    + unification of each direction checking of the check_puttable routine
+    + also the check_empty routine and the process_put routine
+    + server mode
+    + check illegal PASS of human players
+
+  + improve display routine
+    + variable size board
+    + indicate the newest put stone
+    + support to show puttable cells
+    + support visible bell
+ 
+  + enhance thinking routine
+   + check whether computer can get a stone on the edge, and if possible,
+     get it prior
+
+   + further depth
+   + to hold possible senarios
+   + background thinking
+     + need multi-threading support
+
+  + enhance commands
+    + support UNDO
+      + perhaps difficult 
+    + support to save a log 
+    + support to load a log
+
+  + support GUI
+    + Windows
+    + Java
+    + X-Window 
+
+  + create emacs major mode
+    + more optional mode needed?
+    + perhaps can create it by modifying gnugo.el might be usable
+
+  + support network mode
+
+  + create 3D version
+
+
