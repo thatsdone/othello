@@ -1,5 +1,25 @@
 othello history
 $Id$
+2002/02/04
+ * v0.5
+  - Large board size bug (location checking mistake) fixed.
+  - Support status, quit commands.
+
+2002/02/03
+ * v0.4
+  - Refined data structures and function prototypes greatly.
+  - Support help, board command.
+  - Support Computer/Computer match.
+  - Support -0/-1 option for computer-computer game.
+  - Support illegal pass command cheking.
+  - Support variable size board. (But, sizes except 8 are still buggy.)
+
+2002/02/01
+ * v0.3
+  - Level 3 thinking routine worked. But, not so clever. :(
+  - PASS treatment corrected.
+  - bugs of reversible cells fixed.
+
 2002/01/30
  * v0.2
   - Level 2 thinking routine worked.
