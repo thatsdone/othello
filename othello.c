@@ -111,15 +111,23 @@ void calculate_score(struct board *bp, int *black, int *white)
 
 
 
-void finalize(void)
+void finalize(struct board *bp)
 {
     int black, white;
     
     printf("Game Over!\n");
-    calculate_score(&bd, &black, &white);
+    calculate_score(bp, &black, &white);
     printf("BLACK: %d, WHITE: %d\n", black, white);
-    
-    
+    if (black == white) {
+        printf("Even result!\n");
+        
+    } else if (black > white) {
+        printf("BLACK wins by %d stones\n", black - white);
+        
+    } else {
+        printf("WHITE wins by %d stones\n", white - black);
+    }
+
     return;
 }
 
@@ -197,7 +205,7 @@ int interactive(struct board *b)
             color = OPPOSITE_COLOR(color);
             putp = NULL;
             if (was_pass == YES) {
-                finalize();
+                finalize(&bd);
             }
             was_pass = YES;
             
@@ -225,7 +233,7 @@ int interactive(struct board *b)
                     }
                     is_end = increment_cell_num();
                     if (is_end == YES) {
-                        finalize();
+                        finalize(&bd);
                     }
                     putp = NULL;
                         /* flip color */
@@ -240,7 +248,7 @@ int interactive(struct board *b)
             }
             output(&bd);
             if (is_end == YES) {
-                finalize();
+                finalize(&bd);
             }
             if ((mode == MODE_HUMAN_COMPUTER) ||
                 (mode == MODE_COMPUTER_COMPUTER)) {
@@ -250,12 +258,12 @@ int interactive(struct board *b)
                 if (ret != PASS) {
                     is_end = increment_cell_num();
                     if (is_end == YES) {
-                        finalize();
+                        finalize(&bd);
                     }
                     was_pass = NO;
                 } else {
                     if (was_pass == YES) {
-                        finalize();
+                        finalize(&bd);
                     }
                     was_pass = YES;
                 }
@@ -575,7 +583,7 @@ int main (int argc, char **argv)
     
     dprintf("initizlize board\n");
     initboard(&bd);
-
+    printf("level=%d\n", level);
     dprintf("interactive\n");    
     interactive(&bd);
 }
