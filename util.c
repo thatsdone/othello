@@ -22,6 +22,20 @@ void append(struct queue *head, struct queue *target)
     dprintf("append: target->next=%p, target->prev=%p\n", target->next,target->prev);
 }
 
+void push(struct queue *head, struct queue *target)
+{
+    printf("push: head=%p, target=%p\n", head, target);
+    printf("push: head->next=%p, head->prev=%p\n", head->next,head->prev);
+    
+    target->prev = head;
+    target->next = head->next;
+    
+    head->next->prev = target;
+    head->next = target;
+    printf("push: head->next=%p, head->prev=%p\n", head->next,head->prev);
+    printf("push: target->next=%p, target->prev=%p\n", target->next,target->prev);
+}
+
 void delete(struct queue *target)
 {
     struct queue *save;
