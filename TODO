@@ -18,6 +18,7 @@ $Id$
     + also the check_empty routine and the process_put routine
     + server mode
     + check illegal PASS of human players
+    + refine input/output routines.
 
   + improve display routine
     + variable size board
