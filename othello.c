@@ -44,7 +44,7 @@ int serve_computer_turn(struct board *bp, int color)
     printf("Thinking...\n");
     ret = think(&bd, putp, color);
     if (ret != YES) {
-        dprintf("Pass.\n");
+        printf("Pass!\n");
         putp->color = color;
         putp->p.x = -1;
         putp->p.y = -1;        
@@ -113,6 +113,7 @@ int interactive(struct board *b)
         ret = serve_computer_turn(&bd, color);
         if (ret != PASS) {
             increment_cell_num();
+            was_pass = YES;
         }
         /* flip color */
         color = OPPOSITE_COLOR(color);
@@ -157,6 +158,9 @@ int interactive(struct board *b)
             append(&top, &(putp->main));
             color = OPPOSITE_COLOR(color);
             putp = NULL;
+            if (was_pass == YES) {
+                finalize();
+            }
             was_pass = YES;
             
         } else {
@@ -182,9 +186,13 @@ int interactive(struct board *b)
                         exit(255);
                     }
                     is_end = increment_cell_num();
+                    if (is_end == YES) {
+                        finalize();
+                    }
                     putp = NULL;
                         /* flip color */
                     color = OPPOSITE_COLOR(color);
+                    was_pass = NO;
                 
                 } else {
                     printf("Input error\n");
@@ -207,8 +215,11 @@ int interactive(struct board *b)
                     }
                     was_pass = NO;
                 } else {
+                    if (was_pass == YES) {
+                        finalize();
+                    }
+                    was_pass = YES;
                 }
-                
                 color = OPPOSITE_COLOR(color);
             }
           next_turn:
@@ -221,6 +232,8 @@ int interactive(struct board *b)
 int initboard(struct board *bp)
 {
     int x, y;
+    struct put *putp;
+    
     for (x = 0; x < BOARDSIZE; x++) {
         for (y = 0; y < BOARDSIZE; y++) {
             bp->b[x][y] = EMPTY;
@@ -228,12 +241,35 @@ int initboard(struct board *bp)
     }
     bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2 - 1] = WHITE;
     increment_cell_num();
+    putp = allocput();
+    putp->color = WHITE;
+    putp->p.x = BOARDSIZE / 2 - 1;
+    putp->p.y = BOARDSIZE / 2 - 1;
+    append(&top, &(putp->main));
+    
     bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2] = WHITE;
     increment_cell_num();
+    putp = allocput();
+    putp->color = WHITE;
+    putp->p.x = BOARDSIZE / 2;
+    putp->p.y = BOARDSIZE / 2;
+    append(&top, &(putp->main));
+
     bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2] = BLACK;
     increment_cell_num();
+    putp = allocput();
+    putp->color = BLACK;
+    putp->p.x = BOARDSIZE / 2 - 1;
+    putp->p.y = BOARDSIZE / 2;
+    append(&top, &(putp->main));
+    
     bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2 - 1] = BLACK;
     increment_cell_num();
+    putp = allocput();
+    putp->color = BLACK;
+    putp->p.x = BOARDSIZE / 2;
+    putp->p.y = BOARDSIZE / 2 - 1;
+    append(&top, &(putp->main));
 }
 
 

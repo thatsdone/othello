@@ -15,7 +15,7 @@ void command_show(void)
     
     struct queue *q;
     struct put *p;
-    int i = 5;
+    int i = 1;
             
     q = top.next;
     while (q != &top) {
