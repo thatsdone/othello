@@ -1,9 +1,15 @@
 othello history
 $Id$
+2002/01/30
+ * v0.2
+  - Level 2 thinking routine worked.
+  - The end of game can be showed.
+  - score command supported.
 
 2002/01/29
  * v0.1
   - Initial thinking routine worked. (but very poor and has several bugs)
+  - Level 1 thinking routine worked.
 
 2002/01/28
  * v0.0
