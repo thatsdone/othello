@@ -251,15 +251,7 @@ int check_empty(struct session *sp, struct board *bp, struct put *p, int color)
 }
 
 
-
-int process_put(struct session *sp, struct put *p, int color)
-{
-    process_put_bd(sp, &(sp->bd), p, color);
-    return 0;
-}
-
-
-int process_put_bd(struct session *sp,
+int process_put(struct session *sp,
                    struct board *bp,
                    struct put *p, int color)
 {

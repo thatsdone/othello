@@ -254,9 +254,8 @@ extern struct depth *alloc_depth(void);
  * put.c
  */
 extern int check_empty(struct session *, struct board *, struct put *, int);
-extern int process_put(struct session *, struct put *, int);
+extern int process_put(struct session *, struct board *, struct put *, int);
 extern int check_puttable(struct session *, struct board *, struct put *, int);
-extern int process_put_bd(struct session *, struct board *, struct put *, int);
 /*
  * think.c
  */

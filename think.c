@@ -80,7 +80,7 @@ int simple_search_candidate_mp(struct session *sp,
                     }
 #endif
                     SET_CELL(*(putp->bp), putp->p.x, putp->p.y, putp->color);
-                    process_put_bd(sp, putp->bp, putp, putp->color);
+                    process_put(sp, putp->bp, putp, putp->color);
                     dprintf("simple_search_candidate_mp: %p\n", putp->bp);
 #if 0
                     if ((putp->p.x == 2) && (putp->p.y == 2)) {
@@ -833,11 +833,11 @@ int think_level4(struct session *sp, struct put *p, int color)
         putp = CANDIDATE_TO_PUT(qp);
         putp->bp = dup_board(sp, &(sp->bd));
         SET_CELL(*(putp->bp), putp->p.x, putp->p.y, putp->color);
-        process_put_bd(sp, putp->bp, putp, putp->color);
+        process_put(sp, putp->bp, putp, putp->color);
         qp = qp->next;
     }
 #endif
-    tdprintf("think_level4: found %d cells for depth=%d\n", pcount, depth);
+    tdprintf("think_level4: simple_search_candidate_mp() found %d cells for depth=%d\n", pcount, depth);
     if (pcount > 0) {
         retcode = YES;
     } else {

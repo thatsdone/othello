@@ -239,7 +239,7 @@ int serve_computer(struct session *sp, int player)
         exit(255);
     }
     dprintf("check_puttable returns %d\n", ret);
-    ret = process_put(sp, putp, sp->turn);
+    ret = process_put(sp, &(sp->bd), putp, sp->turn);
     if (ret < 0) {
         printf("internal inconsistency\n");
         exit(255);
@@ -275,7 +275,7 @@ int serve_human(struct session *sp, int player)
         if (ret == YES) {
             CELL(sp->bd, putp->p.x, putp->p.y) = putp->color;
             append(&(sp->top), &(putp->main));
-            process_put(sp, putp, putp->color);
+            process_put(sp, &(sp->bd), putp, putp->color);
             output(&(sp->bd));            
             sp->is_end = increment_cell_num(sp);
             if (sp->is_end == YES) {
