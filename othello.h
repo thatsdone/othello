@@ -36,6 +36,8 @@
 struct board 
 {
     int b[BOARDSIZE][BOARDSIZE];
+    int xsize;
+    int ysize;
 };
 
 
@@ -87,9 +89,19 @@ struct put
     struct point p;
 /*    char dir[3][3]; */
 /*    int puttable[NUM_DIRECTION]; */
-
+#if 0
     struct direction neighbor;
     struct direction canget;
+#else
+    union {
+        struct direction b;
+        int i;
+    } neighbor;
+    union {
+        struct direction b;
+        int i;
+    } canget;
+#endif
     int gettable;
     
 #if 0   
@@ -104,6 +116,15 @@ struct put
 #endif
 
 };
+
+
+struct scenario 
+{
+    struct queue main;         /* struct scenario chain */
+    struct queue candidate;    /* struct put chain */
+};
+
+
 
 
 #ifdef DEBUG1
