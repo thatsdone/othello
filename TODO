@@ -7,11 +7,12 @@ $Id$
     + fix not showing 'pass' bug
     + look in infinite loop bug occured on 2002/01/28(bug2)
       + probably, because of struct put free treatment bug.
+    + support computer-computer mode
 
   + basic feature enhancement and refinement of the program
-    + sleep a while before computer puts its stone
+    + sleep a while before computer puts its stone (abandoned)
     + make a cell pool of struct put or other structures
-    + check and show the end of a game
+    + check and show the end of a game (2002/01/30 DONE)
     + show current scores of both players
     + unification of each direction checking of the check_puttable routine
     + also the check_empty routine and the process_put routine
@@ -38,6 +39,7 @@ $Id$
       + perhaps difficult 
     + support to save a log 
     + support to load a log
+    + support score command (2002/01/30 DONE)
 
   + support GUI
     + Windows
