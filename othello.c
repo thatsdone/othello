@@ -107,7 +107,8 @@ void finalize(struct board *bp)
 #define COMMAND_BOARD      9
 #define COMMAND_QUIT      10
 #define COMMAND_TREE      11
-#define COMMAND_NULL      12
+#define COMMAND_DUMP      12
+#define COMMAND_NULL      13
 
 char *commands[] = {
     "  pass   : pass",
@@ -177,6 +178,9 @@ int getcommand(struct session *sp, struct put *putp)
 
     } else if (strcmp(bufp, "tree") == 0) {
         return COMMAND_TREE;
+
+    } else if (strcmp(bufp, "dump") == 0) {
+        return COMMAND_DUMP;
 
     } else if (strlen(bufp) == 0) {
         return COMMAND_NULL;
@@ -347,14 +351,19 @@ int serve_human(struct session *sp, int player)
     case COMMAND_QUIT:
         exit(0);
         break;
+        
     case COMMAND_TREE:
         print_candidate_tree(
             &(sp->player[OPPOSITE_COLOR(sp->turn)].next_depth),
             1);;
         break;
         
+    case COMMAND_DUMP:
+        dump_data(sp);        
+        break;
+        
     case COMMAND_NULL:
-        output(&(sp->bd));        
+        output(&(sp->bd));
         break;
         
     default:

@@ -127,9 +127,7 @@ void initput(struct put *p)
         memset(p, 0x00, sizeof(struct put));
         INITQ(p->main);
         INITQ(p->candidate);
-#if 0
         INITQ(p->depth);
-#endif
         INITQ(p->next_depth);        
     }
     return;
@@ -216,6 +214,152 @@ void cleanup_boards(struct depth *dp)
         putp->bp = NULL;
         qp = qp->next;
     }
+}
+
+
+void dump_config(struct config *cfp)
+{
+    printf("cfg.boardsize is %d\n", cfp->boardsize);
+    printf("cfg.level is %d\n",     cfp->level);
+    printf("cfg.mode is %d\n", cfp->mode);
+    printf("cfg.serve_first is %d\n", cfp->serve_first);
+    printf("cfg.debug is %d\n", cfp->debug_level);
+    printf("cfg.remote_host is %s\n", cfp->remote_host);
+    printf("cfg.remote_port is %d\n", cfp->remote_port);
+    
+    printf("cfg.depth is %d\n", cfp->depth);
+    
+    printf("cfg.opt_b is %d\n", cfp->opt_b);
+    printf("cfg.opt_h is %d\n", cfp->opt_h);
+    printf("cfg.opt_p is %d\n", cfp->opt_p);
+    printf("cfg.opt_l is %d\n", cfp->opt_l);
+    printf("cfg.opt_m is %d\n", cfp->opt_m);
+    printf("cfg.opt_f is %d\n", cfp->opt_f);
+    printf("cfg.opt_d is %d\n", cfp->opt_d);
+    printf("cfg.opt_0 is %d\n", cfp->opt_0);
+    printf("cfg.opt_1 is %d\n", cfp->opt_1);
+    printf("cfg.opt_3 is %d\n", cfp->opt_3);
+    printf("cfg.opt_o is %d\n", cfp->opt_o);
+    printf("cfg.opt_v is %d\n", cfp->opt_v);
+    printf("cfg.opt_D is %d\n", cfp->opt_D);
+
+    return;
+    
+}
+
+void dump_player(struct player *p, int pl)
+{
+    printf("player[%d].type is %d\n", pl, p[pl].type);
+    printf("player[%d].level is %d\n", pl, p[pl].level);
+    printf("player[%d].candidate.next is %p\n", pl, p[pl].candidate.next);
+    printf("player[%d].candidate.prev is %p\n", pl, p[pl].candidate.prev);
+    printf("player[%d].next_depth.next is %p\n", pl, p[pl].next_depth.next);
+    printf("player[%d].next_depth.prev is %p\n", pl, p[pl].next_depth.prev);
+    printf("player[%d].depth.next is %p\n", pl, p[pl].depth.next);
+    printf("player[%d].depth.prev is %p\n", pl, p[pl].depth.prev);
+    
+    printf("player[%d].num_candidate is %d\n", pl, p[pl].num_candidate);
+
+    return;
+}
+
+
+void dump_put(struct put *putp)
+{
+    printf("putp is %p\n", putp);
+    
+    printf("putp->neighbor is %08x\n", putp->neighbor.i);
+    printf("putp->canget   is %08x\n", putp->canget.i);
+    printf("putp->gettable is %d\n", putp->gettable);
+
+    printf("putp->next_depth of IS_EMPTYQ(%d)\n", IS_EMPTYQ(putp->next_depth));
+    printf("putp->next_depth.next is %p\n", putp->next_depth.next);
+    printf("putp->next_depth.prev is %p\n", putp->next_depth.prev);
+    
+    printf("putp->depth of IS_EMPTYQ(%d)\n", IS_EMPTYQ(putp->depth));
+    printf("putp->depth.next is %p\n", putp->depth.next);
+    printf("putp->depth.prev is %p\n", putp->depth.prev);
+
+    printf("putp->bp is %p\n", putp->bp);
+    /* output(putp->bp); */
+    printf("putp->up is %p\n", putp->up);
+    printf("putp->dp is %p\n", putp->dp);
+    
+    printf("putp->black  is %d\n", putp->black);
+    printf("putp->whilte is %d\n", putp->white);
+    return;
+}
+
+
+
+void dump_data(struct session *sp)
+{
+    /*
+     * struct session 
+     */
+    /* cfg */
+    output(&(sp->bd));
+    command_show(sp);
+    printf("sp->counter is %d\n", sp->counter);
+    printf("sp->turn is %d\n", sp->turn);
+    printf("sp->was_pass is %d\n", sp->was_pass);
+    printf("sp->is_end is %d\n", sp->is_end);
+    printf("sp->buf is %p\n", sp->buf);
+    
+    /*
+     * struct config
+     */
+    dump_config(&(sp->cfg));
+    
+    /*
+     * struct player
+     */
+    {
+        int p;
+        for (p = 0; p < NUM_PLAYER; p++) {
+            dump_player(sp->player, p);
+        }
+    }
+
+    {
+        int p;
+        for (p = 0; p < NUM_PLAYER; p++) {
+            printf("\nprint_candidate_tree for player[%d]\n", p);
+            print_candidate_tree(&(sp->player[p].next_depth), 1);
+        }
+    }
+    {
+        int p;
+        struct queue *dqp, *pqp;
+        struct depth *dp;
+        struct put *putp;
+        
+        for (p = 0; p < NUM_PLAYER; p++) {
+            dqp = GET_TOP_ELEMENT(sp->player[p].depth);
+            while (!IS_ENDQ(dqp, sp->player[p].depth)) {
+                dp = Q_TO_DEPTH(dqp);
+                
+                printf("dp=%p\n", dp);
+                printf("dp->candiate.next is %p\n", dp->candidate.next);
+                printf("dp->candiate.prev is %p\n", dp->candidate.prev);
+                printf("dp->num_cand is %p\n", dp->num_cand);
+                
+                pqp = GET_TOP_ELEMENT(dp->candidate);
+                while (!IS_ENDQ(pqp, dp->candidate)) {
+                    putp = CANDIDATE_TO_PUT(pqp);
+                    
+                    dump_put(putp);
+                    
+                    pqp = pqp->next;
+                }
+                dqp = dqp->next;
+            }
+        }
+    }
+    
+    
+    return;
+    
 }
 
 
