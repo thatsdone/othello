@@ -35,9 +35,9 @@ int command_status(struct session *sp)
 {
     printf("boardsize: (x=%d, y=%d)\n", sp->bd.xsize, sp->bd.ysize);
     printf("player0(BLACK)=%s(level=%d), player1(WHITE)=%s(level=%d)",
-           player_type(sp->player[PLAYER_FIRST].type),
+           PLAYER_TYPE(sp->player[PLAYER_FIRST].type),
            sp->player[PLAYER_FIRST].level,
-           player_type(sp->player[PLAYER_SECOND].type),
+           PLAYER_TYPE(sp->player[PLAYER_SECOND].type),
            sp->player[PLAYER_SECOND].level);
     printf("\n");
     

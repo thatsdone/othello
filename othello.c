@@ -701,6 +701,7 @@ void option(int argc, char **argv, struct session *sp)
     dprintf("  serve_first is %d(0:HUMAN/1:COMPUTER))\n", cfp->serve_first);
     dprintf("  debug level is %d\n", cfp->debug_level);
     dprintf("  3D options is %d\n", cfp->opt_3);
+     printf("  depth is %d\n", cfp->depth);    
     
     return;
 }
@@ -823,6 +824,8 @@ struct session *initialize(int argc, char **argv)
     }
     INITQ(sp->player[PLAYER_FIRST].candidate);
     INITQ(sp->player[PLAYER_SECOND].candidate);
+    INITQ(sp->player[PLAYER_FIRST].next_depth);
+    INITQ(sp->player[PLAYER_SECOND].next_depth);
     INITQ(sp->player[PLAYER_FIRST].depth);
     INITQ(sp->player[PLAYER_SECOND].depth);
     sp->player[PLAYER_FIRST].num_candidate   = 0;

@@ -4,6 +4,8 @@
 #ifndef _OTHELLO_H
 #define _OTHELLO_H
 
+#include <stddef.h>
+
 #define VERSION "v0.7"
 
 #define MAX_BOARDSIZE 16
@@ -44,12 +46,17 @@
 
 #define GET_TOP_ELEMENT(queue) (queue).next
 #define GET_LAST_ELEMENT(queue) (queue).prev
-#define CANDIDATE_TO_PUT(queue) (struct put *)((char *)queue - \
-        offsetof(struct put, candidate))
+#define CANDIDATE_TO_PUT(queue) ((struct put *)((char *)queue - \
+        offsetof(struct put, candidate)))
 #define MAIN_TO_PUT(q) (struct put *)(q)
 #define DEPTH_TO_PUT(queue) (struct put *)((char *)queue - \
         offsetof(struct put, depth))
 
+#define NEXTDEPTH_TO_PUT(q) (struct put *)((char *)q - \
+        offsetof(struct put, next_depth))
+
+#define Q_TO_DEPTH(queue) (struct depth *)((char *)queue - \
+        offsetof(struct depth, q))
 
 #define SET_NEIGHBOR(putp, direction) putp->neighbor.i |= (1UL << direction)
 #define CHECK_NEIGHBOR(putp, direction) putp->neighbor.i & (1UL << direction)
@@ -71,10 +78,7 @@
 #define IS_EMPTY_CELL(bd, x, y) (CELL(bd, x, y) == EMPTY)
 #define SET_CELL(bd, x, y, color) CELL(bd, x, y) = (color)
 
-#define player_type(type) ((type == HUMAN) ? "HUMAN" : "COMPUTER")
-
-#define Q_TO_DEPTH(queue) (struct depth *)((char *)queue - \
-        offsetof(struct depth, q))
+#define PLAYER_TYPE(type) ((type == HUMAN) ? "HUMAN" : "COMPUTER")
 
 #define IS_CORNER(sp, putp) ((putp->p.x == 0) && (putp->p.y == 0)) || \
                        ((putp->p.x == 0) && (putp->p.y == MAX_Y(sp))) || \
@@ -144,11 +148,13 @@ struct direction
 
 struct put
 {
-    struct queue main;
-    struct queue candidate;
-    int color;
-    struct point p;
-    
+    struct queue main;             /* main transcript queue */
+    struct queue candidate;        /* candidate queue */
+    int color;                     /* player (color )*/
+    struct point p;                /* cell cordinate */
+    /*
+     * for puttable checking bitmap
+     */
     union {
         struct direction b;
         int i;
@@ -161,16 +167,17 @@ struct put
         /*
          * only for level 4
          */
-    struct queue depth;
-    struct queue next_depth;
-    struct board *bp;
-    struct put *up;
-    struct depth *dp;
+    struct queue next_depth;       /* QH for next depth candidates from this */
+    struct queue depth;            /* QE for the same parent candidate chain */
+    struct board *bp;              /* board with this put */
+    struct put *up;                /* upper depth parent candidate */
+    struct depth *dp;              /* ptr for struct depth of this level */
 };
 
 struct config
 {
-    int boardsize;
+        /* command line option data */
+    int boardsize;               /* -b: board size, assuming square lattice */
     int level;
     int mode;
     int serve_first;
@@ -198,10 +205,12 @@ struct config
 
 struct depth
 {
-    struct queue q;
+    struct queue q;                     /* struct depth chain head */
+    struct queue candidate;             /* candidate struct put chain head */
+#if 0
     int depth;
-    struct queue candidate;
-    struct queue next_depth;
+    struct queue next_depth;            /* only for depth=1 */
+#endif
     int num_cand;
 };
 
@@ -209,8 +218,9 @@ struct player
 {
     int type;                           /* player type HUMAN/COMPUTER */
     int level;
-    struct queue candidate;
-    struct queue depth;
+    struct queue candidate;             /* QH for struct put chain lv < 3 */
+    struct queue next_depth;            /* QH for depth=1 put->depth */
+    struct queue depth;                 /* QH for struct depth chain */
     int num_candidate;
 };
 
@@ -268,6 +278,7 @@ extern void initboard_format(void);
 extern void append(struct queue *, struct queue *);
 extern void push(struct queue *, struct queue *);
 extern void delete(struct queue *);
+extern void requeue_all(struct queue *, struct queue *);
 extern struct put *allocput(void);
 extern void freeput(struct put *);
 extern void initput(struct put *);
@@ -275,12 +286,17 @@ extern void init_depth(struct depth *, int);
 extern struct depth *alloc_depth(void);
 extern int num_put;
 extern int orand(int);
+extern struct board *dup_board(struct session *, struct board *);
+extern void freeboard(struct board *);
+extern void cleanup_boards(struct depth *);
+
 /*
  * put.c
  */
 extern int check_empty(struct session *, struct board *, struct put *, int);
 extern int process_put(struct session *, struct board *, struct put *, int);
 extern int check_puttable(struct session *, struct board *, struct put *, int);
+
 /*
  * think.c
  */
@@ -298,12 +314,22 @@ extern struct depth *allocdepth(void);
 extern void initdepth(struct depth *, int);
 void freedepth(struct depth *);
 
+
+#define STRATEGY_RANDOM           0x0001
+#define STRATEGY_MINI_MAX         0x0002
+#define STRATEGY_MINI_MIN         0x0004
+#define STRATEGY_CENTER_ORIENTED  0x0008
+#define STRATEGY_LIMB_ORIENTED    0x0010
+
+#define STRATEGY_CORNER_BORDER    0x0020
+
+#define STRATEGY_GA               100
+#define STRATEGY_NEURALNET        101
+
+extern struct put *simple_strategy(struct session *, unsigned int);
+extern int search_depth(struct session *, int);
+
+
+
 #endif /* _OTHELLO_H */
-
-
-
-
-
-
-
 
