@@ -8,6 +8,7 @@
 
 #include "othello.h"
 
+struct queue sessions;
 
 struct queue top;
 
@@ -32,40 +33,6 @@ int getpoint(char *buf, struct point *p)
         return NO;
     }
     return YES;
-}
-
-
-int serve_computer_turn(struct board *bp, int color)
-{
-    int ret;
-    struct put *putp;
-    
-    putp = allocput();
-    printf("Thinking...\n");
-    ret = think(&bd, putp, color);
-    if (ret != YES) {
-        printf("Pass!\n");
-        putp->color = color;
-        putp->p.x = -1;
-        putp->p.y = -1;        
-        append(&top, &(putp->main));
-        return PASS;
-    }
-    append(&top, &(putp->main));
-    ret = check_puttable(bp, putp, color);
-    if (ret == YES) {
-        bd.b[putp->p.x][putp->p.y] = color;
-    } else {
-        printf("internal inconsistency\n");
-        exit(255);
-    }
-    dprintf("check_puttable returns %d\n", ret);
-    ret = process_put(&bd, putp, color);
-    if (ret < 0) {
-        printf("internal inconsistency\n");
-        exit(255);
-    }
-    return SERVED;
 }
 
 static int counter = 0;
@@ -95,7 +62,7 @@ void calculate_score(struct board *bp, int *black, int *white)
 
     for (x = 0; x < BOARDSIZE; x++) {
         for (y = 0; y < BOARDSIZE; y++) {
-            switch (bp->b[x][y]) {
+            switch (CELL(*bp, x, y)) {
             case BLACK:
                 (*black)++;
                 break;
@@ -107,8 +74,6 @@ void calculate_score(struct board *bp, int *black, int *white)
     }
     return;
 }
-
-
 
 
 void finalize(struct board *bp)
@@ -131,197 +96,86 @@ void finalize(struct board *bp)
     return;
 }
 
+#define COMMAND_ILLEGAL   -1
+#define COMMAND_INPUT      0
+#define COMMAND_PASS       1
+#define COMMAND_SHOW       2
+#define COMMAND_SCORE      3
+#define COMMAND_SAVE       4
+#define COMMAND_LOAD       5
+#define COMMAND_BACK       6
+#define COMMAND_STATUS     7
+#define COMMAND_HELP       8
+#define COMMAND_BOARD      9
+
+char *commands[] = {
+    "  pass   : pass",
+    "  show   : display internal control structures",
+    "  score  : show score",
+    "  save   : save this game into a transcript file",
+    "  load   : load a game from a transcript file",
+    "  back   : back",
+    "  status : show system status",
+    "  help   : show this message",
+    "  board  : show current board",
+    "*"
+};
 
 
-int interactive(struct board *b)
+int getcommand(struct session *sp, struct put *putp)
 {
-    char buf[256];
-    struct put *putp;
-    int ret;
-    int color;
-    int turn = 0;
-    int occupied_cell = 0;
-    int is_end = NO;
-    int was_pass;
+    char buf[256], *bufp;
+
+    memset(buf, 0x00, sizeof(buf));
     
-    output(&bd);
-
-    color = BLACK;
-
-    if (((mode == MODE_HUMAN_COMPUTER) && (serve_first == YES)) ||
-         (mode == MODE_COMPUTER_COMPUTER)) {
-        ret = serve_computer_turn(&bd, color);
-        if (ret != PASS) {
-            increment_cell_num();
-            was_pass = YES;
-        }
-        /* flip color */
-        color = OPPOSITE_COLOR(color);
-        output(&bd);
+    if (sp->is_end == YES) {
+        printf("Command(GAME OVER): ");
+    } else if (sp->turn == BLACK) {
+        printf("Command(BLACK): ");
+    } else {
+        printf("Command(WHITE): ");
     }
-    
-    putp = NULL;
-    while (1) {
-        /* allocate putp, if necessory */
-        if (putp == NULL){
-            putp = allocput();
-        }
+    if (fgets(buf, 256, stdin) == NULL) {
+        printf("null input\n");
+        exit(255);
         
-        /* display prompt */
-        if (color == BLACK) {
-            printf("Command(BLACK): ");
-        } else {
-            printf("Command(WHITE): ");
-        }
-        /* get user input */
-        if (fgets(buf, 256, stdin) == NULL) {
-            break;
-        }
-        /* chop */
-        buf[strlen(buf) - 1] = 0x00;
-        dprintf("get '%s'\n", buf);
-
-        if (strcmp(buf, "show") == 0) {
-            /*
-             * show command
-             */
-            dprintf("command 'show' accepted.\n");
-            command_show();
-        } else if (strcmp(buf, "score") == 0) {
-            int black, white;
-            
-            calculate_score(&bd, &black, &white);
-            printf("BLACK:%d, WHITE:%d\n", black, white);
-            
-        } else if (strcmp(buf, "pass") == 0) {
-            /*
-             * pass command
-             */
-            dprintf("command 'pass' accepted.\n");
-            putp->color = color;
-            putp->p.x = -1;
-            putp->p.y = -1;            
-            append(&top, &(putp->main));
-            color = OPPOSITE_COLOR(color);
-            putp = NULL;
-            if (was_pass == YES) {
-                finalize(&bd);
-            }
-            was_pass = YES;
-            
-        } else {
-                /*
-                 * normal input
-                 */
-            if(getpoint(buf, &putp->p) != YES) {
-                printf("Input Error\n");
-                output(&bd);
-                goto next_turn;
-                
-            } else {
-                ret = check_puttable(&bd, putp, color);
-                dprintf("check_puttable returns %d\n", ret);
-                if (ret == YES) {
-                    bd.b[putp->p.x][putp->p.y] = color;
-                    putp->color = color;
-                    append(&top, &(putp->main));
-
-                    ret = process_put(&bd, putp, color);
-                    if (ret < 0) {
-                        dprintf("internal inconsistency\n");
-                        exit(255);
-                    }
-                    is_end = increment_cell_num();
-                    if (is_end == YES) {
-                        finalize(&bd);
-                    }
-                    putp = NULL;
-                        /* flip color */
-                    color = OPPOSITE_COLOR(color);
-                    was_pass = NO;
-                
-                } else {
-                    printf("Input error\n");
-                    output(&bd);
-                    goto next_turn;
-                }
-            }
-            output(&bd);
-            if (is_end == YES) {
-                finalize(&bd);
-            }
-            if ((mode == MODE_HUMAN_COMPUTER) ||
-                (mode == MODE_COMPUTER_COMPUTER)) {
-                ret = serve_computer_turn(&bd, color);
-                /* flip color */
-                output(&bd);
-                if (ret != PASS) {
-                    is_end = increment_cell_num();
-                    if (is_end == YES) {
-                        finalize(&bd);
-                    }
-                    was_pass = NO;
-                } else {
-                    if (was_pass == YES) {
-                        finalize(&bd);
-                    }
-                    was_pass = YES;
-                }
-                color = OPPOSITE_COLOR(color);
-            }
-          next_turn:
-            
-        }
     }
-}
+    bufp = &(buf[0]);
+        
+    /* chop */
+    buf[strlen(buf) - 1] = 0x00;
+    dprintf("get '%s'\n", buf);
+    
+    if (strcmp(buf, "show") == 0) {
+        return COMMAND_SHOW;
+            
+    } else if (strcmp(bufp, "score") == 0) {
+        return COMMAND_SCORE;
+           
+    } else if (strcmp(bufp, "pass") == 0) {
+        return COMMAND_PASS;
 
-    
-int initboard(struct board *bp)
-{
-    int x, y;
-    struct put *putp;
-    
-    for (x = 0; x < BOARDSIZE; x++) {
-        for (y = 0; y < BOARDSIZE; y++) {
-            bp->b[x][y] = EMPTY;
+    } else if (strcmp(bufp, "help") == 0) {
+        return COMMAND_HELP;
+        
+    } else if (strcmp(bufp, "board") == 0) {
+        return COMMAND_BOARD;
+        
+    } else {
+            /*
+             * normal input
+             */
+        if(getpoint(bufp, &putp->p) != YES) {
+            return COMMAND_ILLEGAL;
         }
+
+        dprintf("(x,y)=(%d,%d)\n", putp->p.x, putp->p.y);
+        
+        return COMMAND_INPUT;
     }
-    bp->xsize = boardsize;
-    bp->ysize = boardsize;
     
-    bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2 - 1] = WHITE;
-    increment_cell_num();
-    putp = allocput();
-    putp->color = WHITE;
-    putp->p.x = BOARDSIZE / 2 - 1;
-    putp->p.y = BOARDSIZE / 2 - 1;
-    append(&top, &(putp->main));
-    
-    bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2] = WHITE;
-    increment_cell_num();
-    putp = allocput();
-    putp->color = WHITE;
-    putp->p.x = BOARDSIZE / 2;
-    putp->p.y = BOARDSIZE / 2;
-    append(&top, &(putp->main));
 
-    bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2] = BLACK;
-    increment_cell_num();
-    putp = allocput();
-    putp->color = BLACK;
-    putp->p.x = BOARDSIZE / 2 - 1;
-    putp->p.y = BOARDSIZE / 2;
-    append(&top, &(putp->main));
-    
-    bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2 - 1] = BLACK;
-    increment_cell_num();
-    putp = allocput();
-    putp->color = BLACK;
-    putp->p.x = BOARDSIZE / 2;
-    putp->p.y = BOARDSIZE / 2 - 1;
-    append(&top, &(putp->main));
 }
-
 
 /*
  *" -b <n>           board size\n"
@@ -360,32 +214,289 @@ int opt_l;
 int opt_m;
 int opt_f;
 int opt_d;
+int opt_0;
+int opt_1;
 int opt_3;
+int opt_o;
+int opt_v;
 
 char remote_host[256];
 unsigned short remote_port = 9360;
-int level = 2;
+int level = 3;
 int boardsize = BOARDSIZE;
 int mode = MODE_HUMAN_COMPUTER;
 int serve_first = NO;
 int debug_level = 0;
 
-int option(int argc, char **argv) 
-{
-    int c, i;
-    char *cp;
 
-    opt_b = NO;
-    opt_h = NO;
-    opt_p = NO;
-    opt_l = NO;
-    opt_m = NO;
-    opt_f = NO;
-    opt_d = NO;
-    opt_3 = NO;
+int serve_computer(struct session *sp, int player)
+{
+    int ret;
+    struct put *putp;
+
+    int savecolor;
+    
+    dprintf("serve_computer\n");
+    
+    putp = allocput();
+    putp->color = sp->turn;
+
+    savecolor = sp->turn;
+    
+    printf("Thinking...\n");
+    ret = think(sp, putp, sp->turn);
+    sp->is_end = increment_cell_num();
+    if (ret != YES) {
+        printf("Pass!\n");
+        putp->p.x = -1;
+        putp->p.y = -1;        
+        append(&(sp->top), &(putp->main));
+        FLIP_COLOR(sp);
+        if (sp->was_pass == YES) {
+            sp->is_end = YES;
+        }
+        sp->was_pass = YES;
+        return PASS;
+    }
+    append(&(sp->top), &(putp->main));
+    ret = check_puttable(sp, putp, sp->turn);
+    if (ret == YES) {
+        CELL(sp->bd, putp->p.x, putp->p.y) = sp->turn;
+    } else {
+        printf("internal inconsistency\n");
+        exit(255);
+    }
+    dprintf("check_puttable returns %d\n", ret);
+    ret = process_put(sp, putp, sp->turn);
+    if (ret < 0) {
+        printf("internal inconsistency\n");
+        exit(255);
+    }
+    output(&(sp->bd));
+    FLIP_COLOR(sp);
+    return SERVED;
+}
+
+
+int command_pass(struct session *sp, struct put *putp)
+{
+    int x, y, ret;
+    struct put *wputp;
+
+    wputp = allocput();
+    
+    for (x = 0; x < sp->bd.xsize; x++) {
+        for (y = 0; y < sp->bd.ysize; y++) {
+            initput();
+            wputp->p.x = x;
+            wputp->p.y = y;
+            wputp->color = OPPOSITE_COLOR(sp->turn);
+            ret = check_puttable(sp, wputp, OPPOSITE_COLOR(sp->turn));
+            if (ret == YES) {
+                printf("Illegal PASS!\n");
+                freeput(wputp);
+                return NO;
+            }
+        }
+    }
+    
+    append(&(sp->top), &(putp->main));
+    if (sp->was_pass == YES) {
+        finalize(&(sp->bd));
+        
+    } else {
+        putp->p.x = -1;
+        putp->p.x = -1;
+        append(&(sp->top), &(putp->main));
+        FLIP_COLOR(sp);
+        sp->was_pass = YES;
+    }
+    
+    freeput(wputp);
+    return YES;
+}
+
+
+int serve_human(struct session *sp, int player)
+{
+    int ret;
+    struct put *putp;
+
+    dprintf("serve_human\n");
+    if (sp->is_end != YES) {
+        output(&(sp->bd));
+    }
+    
+    
+    putp = allocput();
+    
+    switch(getcommand(sp, putp)) {
+    case COMMAND_ILLEGAL:
+         break;
+            
+    case COMMAND_INPUT:
+        putp->color = sp->turn;
+        ret = check_puttable(sp, putp, putp->color);
+        if (ret == YES) {
+            CELL(sp->bd, putp->p.x, putp->p.y) = putp->color;
+            append(&(sp->top), &(putp->main));
+            process_put(sp, putp, putp->color); 
+            sp->is_end = increment_cell_num();
+            if (sp->is_end == YES) {
+                finalize(&(sp->bd));
+            }
+            sp->was_pass = NO;
+            FLIP_COLOR(sp);        
+        }
+        break;
+            
+    case COMMAND_PASS:
+        command_pass(sp, putp);
+        break;
+            
+    case COMMAND_SHOW:
+        command_show(sp);
+        break;
+            
+    case COMMAND_SCORE:
+    {
+            
+        int black, white;
+        calculate_score(&(sp->bd), &black, &white);
+        printf("BLACK:%d, WHITE:%d\n", black, white);
+    }
+        break;
+            
+    case COMMAND_SAVE:
+        break;
+            
+    case COMMAND_LOAD:
+        break;
+           
+    case COMMAND_BACK:
+        break;
+            
+    case COMMAND_STATUS:
+        break;
+        
+    case COMMAND_HELP:
+    {
+        int i = 0;
+        while (commands[i][0] != '*') {
+            printf("%s\n", commands[i]);
+            i++;
+        }
+    }
+        break;
+        
+    case COMMAND_BOARD:
+        output(&(sp->bd));
+        break;
+        
+    default:
+    }
+   
+    return 0;
+}
+
+
+int serve_player(struct session *sp, int player)
+{
+    int ret;
+
+    {
+        int black, white;
+        calculate_score(&(sp->bd), &black, &white);
+        printf("COUNT: %d, TURN: %d, BLACK:%d, WHITE:%d\n",
+               get_occupied_cell_num(),
+               sp->turn, black, white);
+    }
+    
+    switch (sp->cfg.mode) {
+    case MODE_HUMAN_HUMAN:
+        ret = serve_human(sp, player);
+        break;
+        
+    case MODE_HUMAN_COMPUTER:
+    case MODE_NETWORK:
+        if (sp->player[player].type == HUMAN) {
+            ret = serve_human(sp, player);
+        } else {
+            ret = serve_computer(sp, player);
+        }
+        break;
+        
+    case MODE_COMPUTER_COMPUTER:
+        ret = serve_computer(sp, player);
+        break;
+        
+    default:
+        printf("Internal consistency!");
+        exit(255);
+    }
+    return ret;
+}
+
+void command_loop(struct session *sp)
+{
+    ;
+    return;
+}
+
+
+
+
+void game(struct session *sp)
+{
+    int ret;
+    int pass;
+
+#define WHICH_TURN(sp) (sp)->turn
     
     while (1) {
-        c = getopt(argc, argv, "b:h:p:l:m:f:d:v3");
+        switch(WHICH_TURN(sp)) {
+        case PLAYER_FIRST:
+            pass = serve_player(sp, PLAYER_FIRST);
+            break;
+            
+        case PLAYER_SECOND:
+            pass = serve_player(sp, PLAYER_SECOND);
+            break;
+            
+        default:
+            printf("Internal consistency!\n");
+        }
+        if (sp->is_end == YES) {
+            finalize(&(sp->bd));
+            while (1) {
+                ret = serve_human(sp, BLACK);
+            }
+        }
+    }
+    
+    return;
+}
+
+
+void option_new(int argc, char **argv, struct session *sp)
+{
+    int c, i;
+    
+    struct config *cfp;
+    
+    cfp = &(sp->cfg);
+    
+    cfp->level = 3;
+    cfp->boardsize = BOARDSIZE;
+    cfp->mode = MODE_HUMAN_COMPUTER;
+    cfp->serve_first = NO;
+    cfp->debug_level = 0;
+
+    sp->player[0].level = 3;
+    sp->player[1].level = 3;    
+    
+    while (1) {
+        c = getopt(argc, argv, "b:h:p:l:m:f:d:0:1:v3");
         switch (c) {
         case 'b':
             dprintf("getopt returns %c\n", c);
@@ -395,18 +506,18 @@ int option(int argc, char **argv)
                     printf("-b needs argument\n");
                     exit(255);
                 }
-                opt_b = YES;
-                boardsize = atoi(optarg);
+                cfp->opt_b = YES;
+                cfp->boardsize = atoi(optarg);
                 if ((boardsize % 2) != 0) {
                     printf("board size must be even number\n");
                     exit(255);
                 }
-                if (boardsize > MAX_BOARDSIZE) {
+                if (cfp->boardsize > MAX_BOARDSIZE) {
                     printf("boardsize is restricted less than equal %d\n",
                            MAX_BOARDSIZE);
                     exit(255);
                 }
-                if (boardsize < MIN_BOARDSIZE) {
+                if (cfp->boardsize < MIN_BOARDSIZE) {
                     printf("boardsize is restricted more than equal %d\n",
                            MIN_BOARDSIZE);
                     exit(255);
@@ -427,8 +538,8 @@ int option(int argc, char **argv)
                     dprintf("-h needs argument\n");
                     exit(255);
                 }
-                opt_h = YES;
-                strcpy(remote_host, optarg);
+                cfp->opt_h = YES;
+                strcpy(cfp->remote_host, optarg);
             } else {
                 dprintf("optstring is NULL");
                 dprintf("-h needs argument\n");
@@ -444,8 +555,8 @@ int option(int argc, char **argv)
                     printf("-p needs argument\n");
                     exit(255);
                 }
-                opt_p = YES;
-                remote_port = atoi(optarg);
+                cfp->opt_p = YES;
+                cfp->remote_port = atoi(optarg);
             } else {
                 dprintf("optstring is NULL");
                 printf("-p needs argument\n");
@@ -461,8 +572,10 @@ int option(int argc, char **argv)
                     printf("-l needs argument\n");
                     exit(255);
                 }
-                opt_l = YES;
-                level = atoi(optarg);
+                cfp->opt_l = YES;
+                cfp->level = atoi(optarg);
+                printf("level is %d\n", cfp->level);
+                
             } else {
                 dprintf("optstring is NULL");
                 printf("-p needs argument\n");
@@ -478,8 +591,8 @@ int option(int argc, char **argv)
                     printf("-m needs argument\n");
                     exit(255);
                 }
-                opt_m = YES;
-                mode = atoi(optarg);
+                cfp->opt_m = YES;
+                cfp->mode = atoi(optarg);
             } else {
                 dprintf("optstring is NULL");
                 printf("-p needs argument\n");
@@ -495,8 +608,8 @@ int option(int argc, char **argv)
                     printf("-f needs argument\n");
                     exit(255);
                 }
-                opt_f = YES;
-                serve_first = atoi(optarg);
+                cfp->opt_f = YES;
+                cfp->serve_first = atoi(optarg);
             } else {
                 dprintf("optstring is NULL");
                 printf("-f needs argument\n");
@@ -512,11 +625,45 @@ int option(int argc, char **argv)
                     printf("-l needs argument\n");
                     exit(255);
                 }
-                opt_l = YES;
-                level = atoi(optarg);
+                cfp->opt_l = YES;
+                cfp->debug_level = atoi(optarg);
             } else {
                 dprintf("optstring is NULL");
                 printf("-d needs argument\n");
+                exit(255);
+            }
+            break;
+            
+        case '0':
+            dprintf("getopt returns %c\n", c);
+            if (optarg != NULL) {
+                dprintf("optstring is %s\n", optarg);
+                if (optarg[0] == '-') {
+                    printf("-l needs argument\n");
+                    exit(255);
+                }
+                opt_0 = YES;
+                sp->player[BLACK].level = atoi(optarg);
+            } else {
+                dprintf("optstring is NULL");
+                printf("-0 needs argument\n");
+                exit(255);
+            }
+            break;
+            
+        case '1':
+            dprintf("getopt returns %c\n", c);
+            if (optarg != NULL) {
+                dprintf("optstring is %s\n", optarg);
+                if (optarg[0] == '-') {
+                    printf("-l needs argument\n");
+                    exit(255);
+                }
+                opt_0 = YES;
+                sp->player[WHITE].level = atoi(optarg);
+            } else {
+                dprintf("optstring is NULL");
+                printf("-1 needs argument\n");
                 exit(255);
             }
             break;
@@ -551,41 +698,160 @@ int option(int argc, char **argv)
   exit:
 
     dprintf("Specified options summary\n");
-    dprintf("  boardsize is %d\n", boardsize);
-    dprintf("  remote_host is %s\n", remote_host);
-    dprintf("  remote_port is %d\n", remote_port);
-    dprintf("  level is %d\n", level);
-    dprintf("  mode is %d\n", mode);
-    dprintf("  serve_first is %d(0:HUMAN/1:COMPUTER))\n", serve_first);
-    dprintf("  debug level is %d\n", debug_level);
-    dprintf("  3D options is %d\n", opt_3);
+    dprintf("  boardsize is %d\n", cfp->boardsize);
+    dprintf("  remote_host is %s\n", cfp->remote_host);
+    dprintf("  remote_port is %d\n", cfp->remote_port);
+    dprintf("  level is %d\n", cfp->level);
+    dprintf("  mode is %d\n", cfp->mode);
+    dprintf("  serve_first is %d(0:HUMAN/1:COMPUTER))\n", cfp->serve_first);
+    dprintf("  debug level is %d\n", cfp->debug_level);
+    dprintf("  3D options is %d\n", cfp->opt_3);
+    
+    return;
+}
 
+int initialize_network(void)
+{
+    return NO;
+}
+
+
+int initboard_new(struct session *sp)
+{
+    int x, y, boardsize;
+    struct put *putp;
+
+    boardsize = sp->cfg.boardsize;
+    
+    sp->bd.b = (int *)malloc(sizeof(int) *
+                              sp->cfg.boardsize * sp->cfg.boardsize);
+    sp->bd.xsize = boardsize;
+    sp->bd.ysize = boardsize;
+
+    for (x = 0; x < boardsize; x++) {
+        for (y = 0; y < boardsize; y++) {
+            CELL(sp->bd, x, y) = EMPTY;
+            dprintf("(%d,%d) is %d\n", x, y, CELL(sp->bd, x,  y));
+            
+        }
+    }
+    printf("boardsize = %d\n", boardsize);
+    
+    CELL(sp->bd, (boardsize / 2 - 1), (boardsize / 2)) = BLACK;
+    increment_cell_num();
+    putp = allocput();
+    putp->color = BLACK;
+    putp->p.x = boardsize / 2 - 1;
+    putp->p.y = boardsize / 2;
+    append(&(sp->top), &(putp->main));
+    
+    CELL(sp->bd, (boardsize / 2 - 1), (boardsize / 2 - 1)) = WHITE;
+    increment_cell_num();
+    putp = allocput();
+    putp->color = WHITE;
+    putp->p.x = boardsize / 2 - 1;
+    putp->p.y = boardsize / 2 - 1;
+    append(&(sp->top), &(putp->main));
+    
+    CELL(sp->bd, boardsize / 2 , boardsize / 2 - 1) = BLACK;
+    increment_cell_num();
+    putp = allocput();
+    putp->color = BLACK;
+    putp->p.x = boardsize / 2;
+    putp->p.y = boardsize / 2 - 1;
+    append(&(sp->top), &(putp->main));
+    
+    CELL(sp->bd, boardsize / 2, boardsize / 2) = WHITE;
+    increment_cell_num();
+    putp = allocput();
+    putp->color = WHITE;
+    putp->p.x = boardsize / 2;
+    putp->p.y = boardsize / 2;
+    append(&(sp->top), &(putp->main));
+
+}
+
+
+struct session *initialize_new(int argc, char **argv)
+{
+    struct session *sp;
+
+    sp = (struct session *)malloc(sizeof (struct session));
+    memset(sp, 0x00, sizeof(struct session));
+    INITQ(sp->main);
+    dprintf("option\n");    
+    option_new(argc, argv, sp);
+    if (sp->cfg.mode == MODE_NETWORK) {
+        if (initialize_network() != YES) {
+            printf("Network initialization error!\n");
+            exit(255);
+        }
+    }
+    
+    /* initialize this session's board */
+    dprintf("board\n");
+    INITQ(sp->top);
+    initboard_new(sp);
+    /* initialize player */
+    dprintf("player\n");
+    switch (sp->cfg.mode) {
+    case MODE_HUMAN_HUMAN:
+        sp->player[PLAYER_FIRST].type = HUMAN;
+        sp->player[PLAYER_SECOND].type = HUMAN;
+        break;
+        
+    case MODE_HUMAN_COMPUTER:
+    case MODE_NETWORK:
+        if (sp->cfg.serve_first == NO) {
+            sp->player[PLAYER_FIRST].type   = HUMAN;
+            sp->player[PLAYER_FIRST].level  = -1;
+            sp->player[PLAYER_SECOND].type  = COMPUTER;
+            sp->player[PLAYER_SECOND].level = sp->cfg.level;
+        } else {
+            sp->player[PLAYER_FIRST].type   = COMPUTER;
+            sp->player[PLAYER_FIRST].level  = sp->cfg.level;
+            sp->player[PLAYER_SECOND].type  = HUMAN;
+            sp->player[PLAYER_SECOND].level = -1;
+        }
+        break;
+        
+    case MODE_COMPUTER_COMPUTER:
+        sp->player[PLAYER_FIRST].type   = COMPUTER;
+        sp->player[PLAYER_SECOND].type  = COMPUTER;
+        break;
+        
+    default:
+            /* never */
+    }
+    INITQ(sp->player[PLAYER_FIRST].candidate);
+    INITQ(sp->player[PLAYER_SECOND].candidate);
+    sp->turn     = BLACK;
+    sp->was_pass = NO;
+    sp->is_end   = NO;    
+    
+    append(&(sessions), &(sp->main));
+    return sp;
     
 }
-
-
-void initialize(void)
-{
-    INITQ(top);
-    INITQ(candidate);
-}
-
-
 
 
 int main (int argc, char **argv)
 {
+    struct session *sessionp;
+    
     printf("othello %s   Written by M.Itoh (c)2002\n", VERSION);
+    INITQ(sessions);
+    sessionp = initialize_new(argc, argv);
+    dprintf("level=%d/%d\n",
+            sessionp->player[0].level,
+            sessionp->player[1].level);
+    dprintf("mode=%d\n", sessionp->cfg.mode);
+    dprintf("size=%d\n", sessionp->cfg.boardsize);
+    dprintf("serve_first=%d\n", sessionp->cfg.serve_first);    
 
-    initialize();
+    game(sessionp);
     
-    option(argc, argv);
-    
-    dprintf("initizlize board\n");
-    initboard(&bd);
-    printf("level=%d\n", level);
-    dprintf("interactive\n");    
-    interactive(&bd);
+
 }
 
     

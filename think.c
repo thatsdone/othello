@@ -8,8 +8,9 @@
 
 #include "othello.h"
 
-
+/*
 struct queue candidate;
+*/
 void initput(struct put *p)
 {
     if (p != NULL) {
@@ -20,10 +21,11 @@ void initput(struct put *p)
     return;
 }
 
-int simple_search_candidate(struct board *bp, int color, struct queue *head)
+int simple_search_candidate(struct session *sp, int color, struct queue *head)
 {
     int x, y, pcount;
     struct put *putp;
+    struct board *bp = &(sp->bd);
     
     pcount = 0;
     putp = allocput();
@@ -33,14 +35,13 @@ int simple_search_candidate(struct board *bp, int color, struct queue *head)
             putp->color = color;
             putp->p.y = y;
             putp->p.x = x;
-            if (check_puttable(bp, putp, color) == YES) {
+            if (check_puttable(sp, putp, color) == YES) {
                 pcount++;
-                tdprintf("think: found cell (%c%d), num=%d, gettable=%d\n",
+                printf("think: found cell (%c%d), num=%d, gettable=%d\n",
                          (int)x + 'A' , y + 1, pcount, putp->gettable);
                 append(head, &(putp->candidate));
                 putp = allocput();
                     /*
-                initput(putp);
                 putp->color = color;
                 putp->p.x = x;
                 putp->p.x = y;
@@ -48,6 +49,22 @@ int simple_search_candidate(struct board *bp, int color, struct queue *head)
             }
         }
     }
+#if 0
+    if (pcount == 0) {
+        for(x = 0; x < 8; x++) {
+            for(y = 0; y < 8; y++) {
+                printf("CELL (x,y)=(%d,%d) is %d(%08x/%08x)\n",
+                       x, y, CELL(sp->bd, x, y),
+                       putp->neighbor.i, putp->canget.i);
+            }
+        }
+    }
+#endif
+    if (pcount == 0) {
+        freeput(putp);
+    }
+    
+        
     return pcount;
 }
 
@@ -93,9 +110,10 @@ struct put *choose_max_gettable(struct queue *headp)
     return gputp;
 }
 
-int choose_corner_border(struct queue *candidatep,
-                                   struct queue *cornerp,
-                                   struct queue *borderp)
+int choose_corner_border(struct session *sp,
+                         struct queue *candidatep,
+                         struct queue *cornerp,
+                         struct queue *borderp)
 {
     int retcode = YES;
     struct queue *qp, *qpsave;
@@ -137,7 +155,7 @@ int choose_corner_border(struct queue *candidatep,
     }
     if (gputp != NULL) {
         delete(&(gputp->candidate));
-        push(&candidate, &(gputp->candidate));
+        push(&(sp->player[sp->turn].candidate), &(gputp->candidate));
     }
     
     return retcode;
@@ -180,7 +198,7 @@ int is_a_good_choice(struct board *bp, struct put *p, int direction)
         }
         
         
-        if (bp->x[x][y] == p->color) {
+        if (CELL(*bp, x, y) == p->color) {
             /* SAME COLOR */
             if (before_myself == YES) {
                 ;
@@ -190,7 +208,7 @@ int is_a_good_choice(struct board *bp, struct put *p, int direction)
                 
             }
             
-        } else if (bp->[x][y] == OPPOSITE_COLOR(p->color)) {
+        } else if (CELL(*bp, x, y) == OPPOSITE_COLOR(p->color)) {
             /* OPPOSITE COLOR */
             if (before_myself == YES) {
                 ;
@@ -211,7 +229,7 @@ int is_a_good_choice(struct board *bp, struct put *p, int direction)
 #if 0            
         
         if (before_myself == YES) {
-            if (bp->b[x][y] == p->color) {
+            if (CELL(*bp, x, y) == p->color) {
                 ;
             }
             
@@ -234,22 +252,27 @@ int is_a_good_choice(struct board *bp, struct put *p, int direction)
  *   search all from x=0,y=0, depth = 1,
  *   choose first gettable point :(
  */
-int think_level0(struct board *bp, struct put *p, int color)
+int think_level0(struct session *sp, struct put *p, int color)
 {
     int x, y, retcode = NO;
     struct put *putp;
-
+    struct board *bp = &(sp->bd);
+    
     putp = allocput();
     for (y = 0; y < BOARDSIZE; y++) {
-        putp->p.y = y;
         for (x = 0; x < BOARDSIZE; x++) {
+            initput(putp);
+            putp->color = color;
+            putp->p.y = y;
             putp->p.x = x;
-            if (check_puttable(bp, putp, color) == YES) {
+            if (check_puttable(sp, putp, color) == YES) {
                 tdprintf("think: found puttable place x=%d/y=%d,gettable=%d\n",
                          x, y, putp->gettable);
                 *p = *putp;
+                retcode = YES;
                 goto exit;
             }
+            
         }
     }
   exit:
@@ -263,14 +286,17 @@ int think_level0(struct board *bp, struct put *p, int color)
  *   choose the cell by which the number of cells I can get
  *   will be maximized.
  */
-int think_level1(struct board *bp, struct put *p, int color)
+int think_level1(struct session *sp, struct put *p, int color)
 {
     int x, y, retcode = NO, pcount;
     struct put *putp, *gputp;
     struct queue *qp;
-
-    pcount = simple_search_candidate(bp, color, &candidate);
-    tdprintf("think: found %d cells.\n", pcount);
+    struct board *bp = &(sp->bd);
+    
+    printf("think_level1: called (was_pass:%d)\n", sp->was_pass);
+    
+    pcount = simple_search_candidate(sp, color, &(sp->player[sp->turn].candidate));
+    printf("think: found %d cells.\n", pcount);
     if (pcount > 0) {
         retcode = YES;
     } else {
@@ -279,14 +305,15 @@ int think_level1(struct board *bp, struct put *p, int color)
          */
         return NO;
     }
-    *p = *choose_max_gettable(&candidate);
+    *p = *choose_max_gettable(&(sp->player[sp->turn].candidate));
     INITQ(p->candidate);  /* ugly */
 
     printf("use (%c%d), gettable=%d\n", (int)p->p.x + 'A',
            p->p.y + 1, p->gettable);
     
-    cleanup_candidates(&candidate);
-
+    cleanup_candidates(&(sp->player[sp->turn].candidate));
+    dprintf("think_level1: return\n");
+    
     return retcode;
 }
 
@@ -297,13 +324,15 @@ int think_level1(struct board *bp, struct put *p, int color)
  *   will be maximized, and if there is corner stone among possible cells,
  *   choose them in preference to ones that enables more cells.
  */
-int think_level2(struct board *bp, struct put *p, int color)
+int think_level2(struct session *sp, struct put *p, int color)
 {
     int x, y, retcode = NO, pcount;
     struct put *putp, *gputp, *cgputp, *bgputp;
     struct queue *qp, corner, border;
-
-    pcount = simple_search_candidate(bp, color, &candidate);
+    struct board *bp = &(sp->bd);
+    
+    pcount = simple_search_candidate(sp, color,
+                                     &(sp->player[sp->turn].candidate));
     tdprintf("think: found %d cells.\n", pcount);
     if (pcount > 0) {
         retcode = YES;
@@ -317,10 +346,11 @@ int think_level2(struct board *bp, struct put *p, int color)
     INITQ(corner);
     INITQ(border);
     
-    choose_corner_border(&candidate, &corner, &border);
+    choose_corner_border(sp, &(sp->player[sp->turn].candidate),
+                         &corner, &border);
 #if 1
     /* max gettable cell on neither corner nor border is the top of cand. */
-    gputp = CANDIDATE_TO_PUT(GET_TOP_ELEMENT(candidate));
+    gputp = CANDIDATE_TO_PUT(GET_TOP_ELEMENT((sp->player[sp->turn].candidate)));
 #else
     gputp = choose_max_gettable(&candidate);
 #endif
@@ -331,7 +361,7 @@ int think_level2(struct board *bp, struct put *p, int color)
     dprintf("border\n");
     bgputp = choose_max_gettable(&border);
 
-    printf("%p,%p,%p\n", cgputp, bgputp, gputp);
+    dprintf("%p,%p,%p\n", cgputp, bgputp, gputp);
     
     if (cgputp != NULL) {
         *p = *cgputp;
@@ -346,10 +376,10 @@ int think_level2(struct board *bp, struct put *p, int color)
     printf("use (%c%d), gettable=%d\n", (int)p->p.x + 'A',
            p->p.y + 1, p->gettable);
     
-    cleanup_candidates(&candidate);
+    cleanup_candidates(&(sp->player[sp->turn].candidate));
     cleanup_candidates(&corner);
     cleanup_candidates(&border);
-    printf("think_level2 return\n");
+    dprintf("think_level2 return\n");
     
     return retcode;
 }
@@ -360,13 +390,15 @@ int think_level2(struct board *bp, struct put *p, int color)
  *     avoid it. In case of no choice other than that,
  *     choose maximum gettable cell.
  */
-int think_level3(struct board *bp, struct put *p, int color)
+int think_level3(struct session *sp, struct put *p, int color)
 {
     int x, y, retcode, pcount;
     struct put *putp, *gputp, *cgputp, *bgputp;
     struct queue *qp, *qpsave, corner, border;
+    struct board *bp = &(sp->bd);    
 
-    pcount = simple_search_candidate(bp, color, &candidate);
+    pcount = simple_search_candidate(sp, color,
+                                     &(sp->player[sp->turn].candidate));
     tdprintf("think: found %d cells.\n", pcount);
     if (pcount > 0) {
         retcode = YES;
@@ -381,83 +413,84 @@ int think_level3(struct board *bp, struct put *p, int color)
     INITQ(border);
     
     gputp = NULL;
-    choose_corner_border(&candidate, &corner, &border);
+    choose_corner_border(sp,
+                         &(sp->player[sp->turn].candidate), &corner, &border);
     /* neigher corner nor border*/
-    if (!IS_EMPTYQ(candidate)) {
-        gputp = CANDIDATE_TO_PUT(GET_TOP_ELEMENT(candidate));
+    if (!IS_EMPTYQ(sp->player[sp->turn].candidate)) {
+        gputp =
+            CANDIDATE_TO_PUT(GET_TOP_ELEMENT(sp->player[sp->turn].candidate));
     }
     
     dprintf("corner\n");
     cgputp = choose_max_gettable(&corner);
 
-    printf("border\n");
+    dprintf("border\n");
     bgputp = NULL;
     if (!IS_EMPTYQ(border)) {
         qp = GET_TOP_ELEMENT(border);
 /*        bgputp = CANDIDATE_TO_PUT(qp);*/
         while (qp != &border) {
             putp = CANDIDATE_TO_PUT(qp);
-            tdprintf("border check level=%d, %08x, (%d,%d)\n",
+            dprintf("border check level=%d, %08x, (%d,%d)\n",
                    level, putp->neighbor.i, putp->p.x, putp->p.y);
             if ((putp->p.x == 0) || (putp->p.x == MAX_X)) {
-                tdprintf("border check both sides x=%d\n", putp->p.x);
-                    
+                dprintf("border check both sides x=%d\n", putp->p.x);
                 if (CHECK_NEIGHBOR(putp, UP) &&
                     CHECK_NEIGHBOR(putp, DOWN) &&
-                    (bp->b[putp->p.x][putp->p.y - 1] ==
-                     bp->b[putp->p.x][putp->p.y + 1])) {
-                    tdprintf("Both of up and down exist.\n");
+                    (CELL(*bp, putp->p.x, putp->p.y - 1) ==
+                     CELL(*bp, putp->p.x, putp->p.y + 1))) {
+                    dprintf("Both of up and down exist.\n");
                         
                     bgputp = putp;
                         
                 } else if (CHECK_NEIGHBOR(putp, UP)) {
-                    if (bp->b[putp->p.x][putp->p.y - 1]
+                    if (CELL(*bp, putp->p.x, putp->p.y - 1)
                             != OPPOSITE_COLOR(color)) {
-                        tdprintf("choose border stone%d/%d\n",
+                        dprintf("choose border stone%d/%d\n",
                                putp->p.x, putp->p.y);
                         bgputp = putp;
                     }
                 } else if (CHECK_NEIGHBOR(putp, DOWN)) {
-                    if (bp->b[putp->p.x][putp->p.y + 1]
+                    if (CELL(*bp, putp->p.x, putp->p.y + 1)
                         != OPPOSITE_COLOR(color)) {
-                        tdprintf("choose border stone%d/%d\n",
+                        dprintf("choose border stone%d/%d\n",
                                putp->p.x, putp->p.y);
                         bgputp = putp;
                     }
                 } else {
-                    tdprintf("clean border cell %x/%x\n",putp->p.x, putp->p.y);
+                    dprintf("clean border cell %x/%x\n",putp->p.x, putp->p.y);
                     bgputp = putp;
                 }
             }
             if ((putp->p.y == 0) || (putp->p.y == MAX_Y)) {
-                tdprintf("hara\n");
+                dprintf("hara\n");
                     
                 if (CHECK_NEIGHBOR(putp, LEFT) &&
                     CHECK_NEIGHBOR(putp, RIGHT) &&
-                    (bp->b[putp->p.x][putp->p.y - 1] ==
-                     bp->b[putp->p.x][putp->p.y + 1])) {
-                    tdprintf("hoge");
+                    (CELL(*bp, putp->p.x, putp->p.y - 1) ==
+                     CELL(*bp, putp->p.x, putp->p.y + 1))) {
+                    dprintf("hoge");
                     bgputp = putp;
                     
                 } else if (CHECK_NEIGHBOR(putp, LEFT)) {
-                    if (bp->b[putp->p.x - 1][putp->p.y]
+                    if (CELL(*bp, putp->p.x - 1, putp->p.y)
                         != OPPOSITE_COLOR(color)) {
                         bgputp = putp;
                     }
                 } else if (CHECK_NEIGHBOR(putp, RIGHT)) {
-                    if (bp->b[putp->p.x + 1][putp->p.y]
+                    if (CELL(*bp, putp->p.x + 1, putp->p.y)
                         != OPPOSITE_COLOR(color)) {
                         bgputp = putp;
                     }
                 } else {
-                    tdprintf("clean border cell %x/%x\n",putp->p.x, putp->p.y);
+                    dprintf("clean border cell %x/%x\n",putp->p.x, putp->p.y);
                     bgputp = putp;
                 }
             }
             qp = qp->next;
         }
     }
-    tdprintf("%p,%p,%p\n", cgputp, bgputp, gputp);
+    dprintf("%p,%p,%p\n", cgputp, bgputp, gputp);
     
     if (cgputp != NULL) {
             /* If a puttalbe coner cell exists,
@@ -469,10 +502,10 @@ int think_level3(struct board *bp, struct put *p, int color)
         
     } else if (gputp == NULL) {
         if (!IS_EMPTYQ(border)) {
-            tdprintf("think_level3: It's rare!\n");
+            dprintf("think_level3: It's rare!\n");
             *p = *choose_max_gettable(&border);
         } else {
-            printf("think_level3: internal inconsistency\n");
+            tdprintf("think_level3: internal inconsistency\n");
             return NO;
         }
         
@@ -485,15 +518,15 @@ int think_level3(struct board *bp, struct put *p, int color)
     printf("use (%c%d), gettable=%d\n", (int)p->p.x + 'A',
            p->p.y + 1, p->gettable);
     
-    cleanup_candidates(&candidate);
+    cleanup_candidates(&(sp->player[sp->turn].candidate));
     cleanup_candidates(&corner);
     cleanup_candidates(&border);
-    tdprintf("think_level3 return\n");
-    
+    dprintf("think_level3 return\n");
+
     return retcode;
 }
 
-int think_level4(struct board *bp, struct put *p, int color)
+int think_level4(struct session *sp, struct put *p, int color)
 {
     int retcode = NO;
     
@@ -501,29 +534,31 @@ int think_level4(struct board *bp, struct put *p, int color)
 }
 
 
-int think(struct board *bp, struct put *p, int color)
+int think(struct session *sp, struct put *p, int color)
 {
     int retcode;
-    
-    switch (level) {
+    struct board *bp = &(sp->bd);
+    printf("think: level=%d\n", sp->player[sp->turn]);
+
+    switch (sp->player[sp->turn].level) {
     case 0:
-        retcode = think_level0(bp, p, color);
+        retcode = think_level0(sp, p, color);
         break;
 
     case 1:
-        retcode = think_level1(bp, p, color);
+        retcode = think_level1(sp, p, color);
         break;
 
     case 2:
-        retcode = think_level2(bp, p, color);
+        retcode = think_level2(sp, p, color);
         break;
 
     case 3:
-        retcode = think_level3(bp, p, color);
+        retcode = think_level3(sp, p, color);
         break;
 
     case 4:
-        retcode = think_level4(bp, p, color);
+        retcode = think_level4(sp, p, color);
         break;
 
     default:
