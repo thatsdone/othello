@@ -39,7 +39,21 @@
 #define CANDIDATE_TO_PUT(queue) (struct put *)((char *)queue - \
         offsetof(struct put, candidate));
 
+#define SET_NEIGHBOR(putp, direction) putp->neighbor.i &= (1UL << direction)
+#define CHECK_NEIGHBOR(putp, direction) putp->neighbor.i & (1UL << direction)
 
+#define SET_CANGET(putp, direction) putp->canget.i &= (1UL << direction)
+#define CHECK_CANGET(putp, direction) putp->canget.i & (1UL << direction)
+
+#define IS_PUTTABLE_RANGE(x, y, bp) ((x >= MIN_PUTTABLE_OFFSET) && \
+                                   (y >= MIN_PUTTABLE_OFFSET) && \
+                                   (x < bp->xsize - MIN_PUTTABLE_OFFSET ) && \
+                                   (y < bp->ysize - MIN_PUTTABLE_OFFSET))
+
+#define IS_SCANNABLE_RANGE(x, y, bp) ((x >= 0) && \
+                                   (y >= 0) && \
+                                   (x < bp->xsize) && \
+                                   (y < bp->ysize))
 
 
 struct board 
