@@ -440,7 +440,7 @@ void option(int argc, char **argv, struct session *sp)
     
     cfp = &(sp->cfg);
     
-    cfp->level = 3;
+    cfp->level = 4;
     cfp->boardsize = BOARDSIZE;
     cfp->mode = MODE_HUMAN_COMPUTER;
     cfp->serve_first = NO;
@@ -459,8 +459,8 @@ void option(int argc, char **argv, struct session *sp)
     cfp->opt_o = NO;
     cfp->opt_v = NO;
     cfp->opt_D = NO;
-    sp->player[0].level = 3;
-    sp->player[1].level = 3;    
+    sp->player[0].level = 4;
+    sp->player[1].level = 4;    
 
     while (1) {
         c = getopt(argc, argv, "b:h:p:l:m:f:d:0:1:D:v3");
@@ -686,7 +686,7 @@ void option(int argc, char **argv, struct session *sp)
         exit(255);
     }
     
-    if ((cfp->opt_l == YES) && (cfp->level == 4) && (cfp->opt_D == NO)) {
+    if ((cfp->level == 4) && (cfp->opt_D == NO)) {
         cfp->depth = 2;
         printf("Level %d Default depth %d used.\n",
                cfp->level, cfp->depth);
