@@ -86,10 +86,41 @@ int get_occupied_cell_num(void)
 }
 
 
+void calculate_score(struct board *bp, int *black, int *white)
+{
+    int x, y;
+    
+    *black = 0;
+    *white = 0;
+
+    for (x = 0; x < BOARDSIZE; x++) {
+        for (y = 0; y < BOARDSIZE; y++) {
+            switch (bp->b[x][y]) {
+            case BLACK:
+                (*black)++;
+                break;
+            case WHITE:
+                (*white)++;
+                break;
+            }
+        }
+    }
+    return;
+}
+
+
+
 
 void finalize(void)
 {
+    int black, white;
+    
     printf("Game Over!\n");
+    calculate_score(&bd, &black, &white);
+    printf("BLACK: %d, WHITE: %d\n", black, white);
+    
+    
+    return;
 }
 
 
@@ -146,6 +177,11 @@ int interactive(struct board *b)
              */
             dprintf("command 'show' accepted.\n");
             command_show();
+        } else if (strcmp(buf, "score") == 0) {
+            int black, white;
+            
+            calculate_score(&bd, &black, &white);
+            printf("BLACK:%d, WHITE:%d\n", black, white);
             
         } else if (strcmp(buf, "pass") == 0) {
             /*
@@ -239,6 +275,9 @@ int initboard(struct board *bp)
             bp->b[x][y] = EMPTY;
         }
     }
+    bp->xsize = boardsize;
+    bp->ysize = boardsize;
+    
     bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2 - 1] = WHITE;
     increment_cell_num();
     putp = allocput();
