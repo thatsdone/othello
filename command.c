@@ -33,7 +33,7 @@ void command_show(struct session *sp)
 
 int command_status(struct session *sp)
 {
-    printf("boardsize: x=%d, y=%d)\n", sp->bd.xsize, sp->bd.ysize);
+    printf("boardsize: (x=%d, y=%d)\n", sp->bd.xsize, sp->bd.ysize);
     printf("player0(BLACK)=%s(level=%d), player1(WHITE)=%s(level=%d)",
            player_type(sp->player[PLAYER_FIRST].type),
            sp->player[PLAYER_FIRST].level,
