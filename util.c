@@ -53,3 +53,8 @@ struct put *allocput(void)
 }
 
 
+void freeput(struct put *p)
+{
+    free((void *)p);
+}
+

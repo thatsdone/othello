@@ -23,6 +23,9 @@
 #define YES 1
 #define NO  0
 
+#define SERVED 1
+#define PASS   2
+
 #define OPPOSITE_COLOR(color) ((color == BLACK) ? WHITE : BLACK)
 
 #define MODE_HUMAN_HUMAN       0
@@ -130,6 +133,7 @@ extern void initboard_format(void);
  */
 extern void append(struct queue *, struct queue *);
 extern struct put *allocput(void);
+void freeput(struct put *);
 /*
  * put.c
  */

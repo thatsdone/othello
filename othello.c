@@ -49,23 +49,49 @@ int serve_computer_turn(struct board *bp, int color)
         putp->p.x = -1;
         putp->p.y = -1;        
         append(&top, &(putp->main));
-        return NO;
+        return PASS;
     }
     append(&top, &(putp->main));
     ret = check_puttable(bp, putp, color);
     if (ret == YES) {
         bd.b[putp->p.x][putp->p.y] = color;
     } else {
-        dprintf("internal inconsistency\n");
+        printf("internal inconsistency\n");
         exit(255);
     }
     dprintf("check_puttable returns %d\n", ret);
     ret = process_put(&bd, putp, color);
     if (ret < 0) {
-        dprintf("internal inconsistency\n");
+        printf("internal inconsistency\n");
+        exit(255);
     }
-    return YES;
+    return SERVED;
 }
+
+static int counter = 0;
+int increment_cell_num(void)
+{
+    counter++;
+
+    if (counter == (BOARDSIZE * BOARDSIZE)) {
+        return YES;
+    } else {
+        return NO;
+    }
+}
+
+int get_occupied_cell_num(void)
+{
+    return counter;
+}
+
+
+
+void finalize(void)
+{
+    printf("Game Over!\n");
+}
+
 
 
 int interactive(struct board *b)
@@ -74,15 +100,20 @@ int interactive(struct board *b)
     struct put *putp;
     int ret;
     int color;
-
+    int turn = 0;
+    int occupied_cell = 0;
+    int is_end = NO;
+    int was_pass;
+    
     output(&bd);
 
     color = BLACK;
 
     if ((mode == MODE_HUMAN_COMPUTER) && (serve_first == YES)) {
-        
         ret = serve_computer_turn(&bd, color);
-        
+        if (ret != PASS) {
+            increment_cell_num();
+        }
         /* flip color */
         color = OPPOSITE_COLOR(color);
         output(&bd);
@@ -126,6 +157,7 @@ int interactive(struct board *b)
             append(&top, &(putp->main));
             color = OPPOSITE_COLOR(color);
             putp = NULL;
+            was_pass = YES;
             
         } else {
                 /*
@@ -134,7 +166,7 @@ int interactive(struct board *b)
             if(getpoint(buf, &putp->p) != YES) {
                 printf("Input Error\n");
                 output(&bd);
-                goto loop_exit;
+                goto next_turn;
                 
             } else {
                 ret = check_puttable(&bd, putp, color);
@@ -147,7 +179,9 @@ int interactive(struct board *b)
                     ret = process_put(&bd, putp, color);
                     if (ret < 0) {
                         dprintf("internal inconsistency\n");
+                        exit(255);
                     }
+                    is_end = increment_cell_num();
                     putp = NULL;
                         /* flip color */
                     color = OPPOSITE_COLOR(color);
@@ -155,19 +189,29 @@ int interactive(struct board *b)
                 } else {
                     printf("Input error\n");
                     output(&bd);
-                    goto loop_exit;
+                    goto next_turn;
                 }
             }
             output(&bd);
-            if (mode == MODE_HUMAN_COMPUTER){
-
-                serve_computer_turn(&bd, color);
-
-                /* flip color */
-                color = OPPOSITE_COLOR(color);
-                output(&bd);
+            if (is_end == YES) {
+                finalize();
             }
-          loop_exit:
+            if (mode == MODE_HUMAN_COMPUTER){
+                ret = serve_computer_turn(&bd, color);
+                /* flip color */
+                output(&bd);
+                if (ret != PASS) {
+                    is_end = increment_cell_num();
+                    if (is_end == YES) {
+                        finalize();
+                    }
+                    was_pass = NO;
+                } else {
+                }
+                
+                color = OPPOSITE_COLOR(color);
+            }
+          next_turn:
             
         }
     }
@@ -183,9 +227,13 @@ int initboard(struct board *bp)
         }
     }
     bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2 - 1] = BLACK;
+    increment_cell_num();
     bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2] = BLACK;
+    increment_cell_num();
     bp->b[BOARDSIZE / 2 - 1][BOARDSIZE / 2] = WHITE;
+    increment_cell_num();
     bp->b[BOARDSIZE / 2 ][BOARDSIZE / 2 - 1] = WHITE;
+    increment_cell_num();
 }
 
 

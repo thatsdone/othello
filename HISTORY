@@ -1,9 +1,14 @@
-ASCII OTHELLO History
+othello history
+$Id$
 
-2001/01/28
-	- Initial Human vs Human version worked. (v0.0)
+2002/01/29
+ * v0.1
+  - Initial thinking routine worked. (but very poor and has several bugs)
 
-	- computer's pass is not implemented yet correctly
-	- human error case is incorrect
-	- reversible stone counting is not implemented.
+2002/01/28
+ * v0.0
+  - Initial Human vs Human version worked. (v0.0)
+  - computer's pass is not implemented yet correctly
+  - human error case is incorrect
+   reversible stone counting is not implemented.
 

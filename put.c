@@ -217,7 +217,7 @@ int check_puttable(struct board *bp, struct put *p, int color)
 {
     int ret, retcode = NO;
     int x, y, px, py;
-    int puttable = NO;
+/*    int puttable = NO; */
     int gettable = 0;
     int getwk;
     
@@ -237,10 +237,11 @@ int check_puttable(struct board *bp, struct put *p, int color)
     /*
      * up
      */
-    getwk = 1;
+    retcode = NO;
     dprintf("check_puttable: checking up\n");
     if ((p->neighbor.up & YES) && (py >= MIN_PUTTABLE_OFFSET) &&
         (bp->b[px][py - 1] == OPPOSITE_COLOR(color))) {
+        getwk = 1;
         for (y = py - PUT_CHECK_OFFSET; y >= MIN_Y; y--) {
             dprintf("loop: y = %d, color = %d\n", y, bp->b[px][y]);
             if (bp->b[px][y] == color) {
@@ -254,7 +255,9 @@ int check_puttable(struct board *bp, struct put *p, int color)
             }
             getwk++;
         }
-        gettable += getwk;
+        if (retcode == YES) {
+            gettable += getwk;
+        }
     } else {
         dprintf("Up is not gettable line.\n");
         dprintf("neighbor.up = %d\n", p->neighbor.up & 1);
@@ -262,10 +265,11 @@ int check_puttable(struct board *bp, struct put *p, int color)
     /*
      * down
      */
-    getwk = 1;
+    retcode = NO;
     dprintf("check_puttable: checking down\n");
     if ((p->neighbor.down & YES) && (py <= MAX_Y - MIN_PUTTABLE_OFFSET) &&
         (bp->b[px][py + 1] == OPPOSITE_COLOR(color))) {
+        getwk = 1;
         for (y = py + PUT_CHECK_OFFSET; y <= MAX_Y; y++) {
             dprintf("loop: y = %d, color = %d\n", y, bp->b[px][y]);
             if (bp->b[px][y] == color) {
@@ -279,7 +283,9 @@ int check_puttable(struct board *bp, struct put *p, int color)
             }
             getwk++;
         }
-        gettable += getwk;
+        if (retcode == YES) {
+            gettable += getwk;
+        }
     } else {
         dprintf("Down is not gettable line.\n");
         dprintf("neighbor.down = %d\n", p->neighbor.down & 1);
@@ -287,10 +293,11 @@ int check_puttable(struct board *bp, struct put *p, int color)
     /*
      * left
      */
-    getwk = 1;
+    retcode = NO;
     dprintf("check_puttable: checking left\n");
     if ((p->neighbor.left & YES) && (px >= MIN_PUTTABLE_OFFSET) &&
         (bp->b[px - 1][py] == OPPOSITE_COLOR(color))) {
+        getwk = 1;
         for (x = px - PUT_CHECK_OFFSET; x >= MIN_X; x--) {
             dprintf("loop: x = %d, color = %d\n", x, bp->b[x][py]);
             if (bp->b[x][py] == color) {
@@ -304,7 +311,9 @@ int check_puttable(struct board *bp, struct put *p, int color)
             }
             getwk++;
         }
-        gettable += getwk;
+        if (retcode == YES) {
+            gettable += getwk;
+        }
     } else {
         dprintf("Left is not gettable line.\n");
         dprintf("neighbor.left = %d\n", p->neighbor.left & 1);
@@ -313,10 +322,11 @@ int check_puttable(struct board *bp, struct put *p, int color)
     /*
      * right
      */
-    getwk = 1;
+    retcode = NO;
     dprintf("check_puttable: checking right\n");
     if ((p->neighbor.right & YES) && (px <= MAX_X - MIN_PUTTABLE_OFFSET) &&
         (bp->b[px + 1][py] == OPPOSITE_COLOR(color))) {
+        getwk = 1;
         for (x = px + PUT_CHECK_OFFSET; x <= MAX_X; x++) {
             dprintf("loop: x = %d, color = %d\n", x, bp->b[x][py]);
             if (bp->b[x][py] == color) {
@@ -330,7 +340,9 @@ int check_puttable(struct board *bp, struct put *p, int color)
             }
             getwk++;
         }
-        gettable += getwk;
+        if (retcode == YES) {
+            gettable += getwk;
+        }
     } else {
         dprintf("Right is not gettable line.\n");
         dprintf("neighbor.down = %d\n", p->neighbor.down & 1);
@@ -338,12 +350,13 @@ int check_puttable(struct board *bp, struct put *p, int color)
     /*
      * upper left
      */
-    getwk = 1;
+    retcode = NO;
     dprintf("check_puttable: checking upper left\n");
     if ((p->neighbor.upper_left & YES) &&
         (px >= MIN_PUTTABLE_OFFSET) &&        
         (py >= MIN_PUTTABLE_OFFSET) &&
         (bp->b[px - 1][py - 1] == OPPOSITE_COLOR(color))) {
+        getwk = 1;
         for (y = py - PUT_CHECK_OFFSET, x = px - PUT_CHECK_OFFSET;
              (y >= MIN_Y && x >= MIN_X); y--, x--) {
             dprintf("loop: x = %d, y = %d, color = %d\n", x, y, bp->b[x][y]);
@@ -358,7 +371,9 @@ int check_puttable(struct board *bp, struct put *p, int color)
             }
             getwk++;
         }
-        gettable += getwk;
+        if (retcode == YES) {
+            gettable += getwk;
+        }
     } else {
         dprintf("Upper Left is not gettable line.\n");
         dprintf("neighbor.upper_left = %d\n", p->neighbor.upper_left & 1);
@@ -366,12 +381,13 @@ int check_puttable(struct board *bp, struct put *p, int color)
     /*
      * upper right
      */
-    getwk = 1;
+    retcode = NO;
     dprintf("check_puttable: checking upper right\n");
     if ((p->neighbor.upper_right & YES) &&
         (px <= MAX_X - MIN_PUTTABLE_OFFSET) &&
         (py >= MIN_PUTTABLE_OFFSET) &&
         (bp->b[px + 1][py - 1] == OPPOSITE_COLOR(color))) {
+        getwk = 1;
         for (y = py - PUT_CHECK_OFFSET,x = px + PUT_CHECK_OFFSET;
              (y >= MIN_Y && x <= MAX_X); y--, x++) {
             dprintf("loop: x = %d, y = %d, color = %d\n", x, y, bp->b[x][y]);
@@ -386,7 +402,9 @@ int check_puttable(struct board *bp, struct put *p, int color)
             }
             getwk++;
         }
-        gettable += getwk;
+        if (retcode == YES) {
+            gettable += getwk;
+        }
     } else {
         dprintf("Upper Right is not gettable line.\n");
         dprintf("neighbor.upper_right = %d\n", p->neighbor.upper_right & 1);
@@ -395,12 +413,14 @@ int check_puttable(struct board *bp, struct put *p, int color)
     /*
      * lower left
      */
-    getwk = 1;
+    retcode = NO;
     dprintf("check_puttable: checking lower left\n");
+    dprintf("%d/%d/%d\n", (p->neighbor.lower_left & YES),px,py);
     if ((p->neighbor.lower_left & YES) &&
         (px >= MIN_PUTTABLE_OFFSET) &&
         (py <= MAX_Y - MIN_PUTTABLE_OFFSET) &&
         (bp->b[px - 1][py + 1] == OPPOSITE_COLOR(color))) {
+        getwk = 1;
         for (x = px - PUT_CHECK_OFFSET, y = py + PUT_CHECK_OFFSET;
              (x >= MIN_X && y <= MAX_Y); x--, y++) {
             dprintf("loop: x = %d, y = %d, color = %d\n", x, y, bp->b[x][y]);
@@ -415,7 +435,9 @@ int check_puttable(struct board *bp, struct put *p, int color)
             }
             getwk++;
         }
-        gettable += getwk;
+        if (retcode == YES) {
+            gettable += getwk;
+        }
     } else {
         dprintf("Lower Left is not gettable line.\n");
         dprintf("neighbor.upper_right = %d\n", p->neighbor.upper_right & 1);
@@ -424,12 +446,13 @@ int check_puttable(struct board *bp, struct put *p, int color)
     /*
      * lower right
      */
-    getwk = 1;
+    retcode = NO;
     dprintf("check_puttable: checking lower right\n");
     if ((p->neighbor.lower_right & YES) &&
         (px <= MAX_X - MIN_PUTTABLE_OFFSET) &&
         (py <= MAX_Y - MIN_PUTTABLE_OFFSET) &&
         (bp->b[px + 1][py + 1] == OPPOSITE_COLOR(color))) {
+        getwk = 1;
         for (y = py + PUT_CHECK_OFFSET, x = px + PUT_CHECK_OFFSET;
              (y <= MAX_Y && x <= MAX_X); y++, x++) {
             dprintf("loop: x = %d, y = %d, color = %d\n", x, y, bp->b[x][y]);
@@ -444,12 +467,18 @@ int check_puttable(struct board *bp, struct put *p, int color)
             }
             getwk++;
         }
-        gettable += getwk;
+        if (retcode == YES) {
+            gettable += getwk;
+        }
     } else {
         dprintf("Lower Right is not gettable line.\n");
         dprintf("neighbor.lower_right = %d\n", p->neighbor.lower_right & 1);
     }
 
+    if (gettable > 0) {
+        retcode = YES;
+    }
+    
     p->gettable = gettable;
     
     return retcode;
