@@ -432,7 +432,8 @@ int think_level3(struct session *sp, struct put *p, int color)
         while (qp != &border) {
             putp = CANDIDATE_TO_PUT(qp);
             dprintf("border check level=%d, %08x, (%d,%d)\n",
-                   level, putp->neighbor.i, putp->p.x, putp->p.y);
+                   sp->player[sp->turn].level,
+                    putp->neighbor.i, putp->p.x, putp->p.y);
             if ((putp->p.x == 0) || (putp->p.x == MAX_X(sp))) {
                 dprintf("border check both sides x=%d\n", putp->p.x);
                 if (CHECK_NEIGHBOR(putp, UP) &&
@@ -538,7 +539,7 @@ int think(struct session *sp, struct put *p, int color)
 {
     int retcode;
     struct board *bp = &(sp->bd);
-    printf("think: level=%d\n", sp->player[sp->turn]);
+    printf("think: level=%d\n", sp->player[sp->turn].level);
 
     switch (sp->player[sp->turn].level) {
     case 0:
