@@ -1,0 +1,9 @@
+ASCII OTHELLO History
+
+2001/01/28
+	- Initial Human vs Human version worked. (v0.0)
+
+	- computer's pass is not implemented yet correctly
+	- human error case is incorrect
+	- reversible stone counting is not implemented.
+
