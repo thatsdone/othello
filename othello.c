@@ -257,11 +257,6 @@ int serve_human(struct session *sp, int player)
     struct put *putp;
 
     dprintf("serve_human\n");
-#if 0
-    if (sp->is_end != YES) {
-        output(&(sp->bd));
-    }
-#endif
     
     putp = allocput();
     
@@ -421,7 +416,7 @@ void game(struct session *sp)
 }
 
 
-void option_new(int argc, char **argv, struct session *sp)
+void option(int argc, char **argv, struct session *sp)
 {
     int c, i;
     
@@ -435,6 +430,19 @@ void option_new(int argc, char **argv, struct session *sp)
     cfp->serve_first = NO;
     cfp->debug_level = 0;
 
+    cfp->opt_b = NO;
+    cfp->opt_h = NO;
+    cfp->opt_p = NO;
+    cfp->opt_l = NO;
+    cfp->opt_m = NO;
+    cfp->opt_f = NO;
+    cfp->opt_d = NO;
+    cfp->opt_0 = NO;
+    cfp->opt_1 = NO;
+    cfp->opt_3 = NO;
+    cfp->opt_o = NO;
+    cfp->opt_v = NO;
+    cfp->opt_D = NO;
     sp->player[0].level = 3;
     sp->player[1].level = 3;    
 
@@ -568,7 +576,7 @@ void option_new(int argc, char **argv, struct session *sp)
                     printf("-l needs argument\n");
                     exit(255);
                 }
-                cfp->opt_l = YES;
+                cfp->opt_d = YES;
                 cfp->debug_level = atoi(optarg);
             } else {
                 dprintf("optstring is NULL");
@@ -656,7 +664,17 @@ void option_new(int argc, char **argv, struct session *sp)
         
     }
   exit:
-
+    
+    if ((cfp->opt_l == YES) && ((cfp->opt_0 == YES) || (cfp->opt_1 == YES))) {
+        printf("Option -l and -0, -1 are mutually exclusive.\n");
+        exit(255);
+    }
+    
+    if ((cfp->opt_l == YES) && (cfp->level == 4) && (cfp->opt_D == NO)) {
+        cfp->depth = 3;
+        printf("Default depth 3 used.\n");
+    }
+    
     dprintf("Specified options summary\n");
     dprintf("  boardsize is %d\n", cfp->boardsize);
     dprintf("  remote_host is %s\n", cfp->remote_host);
@@ -741,8 +759,8 @@ struct session *initialize(int argc, char **argv)
     sp = (struct session *)malloc(sizeof (struct session));
     memset(sp, 0x00, sizeof(struct session));
     INITQ(sp->main);
-    dprintf("option\n");    
-    option_new(argc, argv, sp);
+    dprintf("option\n");
+    option(argc, argv, sp);
     if (sp->cfg.mode == MODE_NETWORK) {
         if (initialize_network() != YES) {
             printf("Network initialization error!\n");
@@ -771,22 +789,10 @@ struct session *initialize(int argc, char **argv)
             sp->player[PLAYER_FIRST].level  = -1;
             sp->player[PLAYER_SECOND].type  = COMPUTER;
             sp->player[PLAYER_SECOND].level = sp->cfg.level;
-            if ((dp = allocdepth()) != NULL) {
-                initdepth(dp, 1);
-                append(&(sp->player[PLAYER_SECOND].depth), &(dp->q));
-            } else {
-                printf("allocdepth() failed\n");
-            }
             
         } else {
             sp->player[PLAYER_FIRST].type   = COMPUTER;
             sp->player[PLAYER_FIRST].level  = sp->cfg.level;
-            if ((dp = allocdepth()) != NULL) {
-                initdepth(dp, 1);
-                append(&(sp->player[PLAYER_FIRST].depth), &(dp->q));
-            } else {
-                printf("allocdepth() failed\n");
-            }
             sp->player[PLAYER_SECOND].type  = HUMAN;
             sp->player[PLAYER_SECOND].level = -1;
         }
@@ -794,19 +800,7 @@ struct session *initialize(int argc, char **argv)
         
     case MODE_COMPUTER_COMPUTER:
         sp->player[PLAYER_FIRST].type   = COMPUTER;
-        if ((dp = allocdepth()) != NULL) {
-            initdepth(dp, 1);
-            append(&(sp->player[PLAYER_FIRST].depth), &(dp->q));
-        } else {
-            printf("allocdepth() failed\n");
-        }
         sp->player[PLAYER_SECOND].type  = COMPUTER;
-        if ((dp = allocdepth()) != NULL) {
-            initdepth(dp, 1);
-            append(&(sp->player[PLAYER_SECOND].depth), &(dp->q));
-        } else {
-            printf("allocdepth() failed\n");
-        }
         break;
         
     default:
