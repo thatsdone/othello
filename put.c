@@ -34,7 +34,7 @@ int unitvec[NUM_DIRECTION][2] =
     {-1,  1}, /* UPPER_RIGHT */
     { 1, -1}, /* LOWER_LEFT  */
     {-1, -1}  /* LOWER_RIGHT */
-s};
+};
 
 char *vecstr[] =
 {
@@ -50,15 +50,17 @@ char *vecstr[] =
 
 #define FOR_EACH_DIRECTION(dir) for(dir = 0; dir < NUM_DIRECTION; dir++)
 
-int check_puttable(struct session *sp, struct put *p, int color)
+int check_puttable(struct session *sp, struct board *bp,
+                   struct put *p, int color)
 {
     int dir, puttable = NO, ret = NO;
+
 
     p->gettable = 0;
 /*    FOR_EACH_DIRECTION(dir) { */
     for(dir = 0; dir < NUM_DIRECTION; dir++) {
         
-        puttable = check_puttable_dir(sp, p, color, dir);
+        puttable = check_puttable_dir(sp, bp, p, color, dir);
         if (puttable == YES) {
             ret = YES;
             dprintf("puttalbe direction found: %s\n", vecstr[dir]);
@@ -104,21 +106,22 @@ int is_puttable_range(struct session *sp, int px, int py, int dir)
 }
 
 
-int check_puttable_dir(struct session *sp, struct put *p, int color, int dir)
+int check_puttable_dir(struct session *sp, struct board *bp,
+                       struct put *p, int color, int dir)
 {
     int ret, retcode, neighbor;
     int x, y, px, py, dx, dy, ix, iy;
     int gettable = 0;
     int getwk;
     int range_check = 0;
-    struct board *bp = &(sp->bd);
+
 
     /*
      *
      */
     dprintf("check_puttable_dir: checking direction: %s\n", vecstr[dir]);
     
-    if (check_empty(sp, p, color) != YES) {
+    if (check_empty(sp, bp, p, color) != YES) {
         dprintf("not empty\n");
     }
     retcode = NO;
@@ -165,20 +168,20 @@ int check_puttable_dir(struct session *sp, struct put *p, int color, int dir)
 
 
 
-int check_empty(struct session *sp, struct put *p, int color)
+int check_empty(struct session *sp, struct board *bp, struct put *p, int color)
 {
     int x, y, ret = YES;
 
     x = p->p.x;
     y = p->p.y;
     
-    if (!IS_EMPTY_CELL(sp->bd, x, y))
+    if (!IS_EMPTY_CELL(*bp, x, y))
         return NO;
 
     /*
      * left
      */
-    if ((x > 0) && !IS_EMPTY_CELL(sp->bd, x - 1, y)) {
+    if ((x > 0) && !IS_EMPTY_CELL(*bp, x - 1, y)) {
         dprintf("left is not empty\n");
         p->neighbor.b.left = YES;
         ret = YES;
@@ -186,7 +189,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * right
      */
-    if ((x < MAX_X(sp)) && !IS_EMPTY_CELL(sp->bd, x + 1, y)) {
+    if ((x < MAX_X(sp)) && !IS_EMPTY_CELL(*bp, x + 1, y)) {
         dprintf("right is not empty\n");
         p->neighbor.b.right = YES;
         ret = YES;
@@ -194,7 +197,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * up
      */
-    if ((y > 0) && !IS_EMPTY_CELL(sp->bd, x, y - 1)) {
+    if ((y > 0) && !IS_EMPTY_CELL(*bp, x, y - 1)) {
         dprintf("up is not empty\n");
         p->neighbor.b.up = YES;
         ret = YES;        
@@ -202,7 +205,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * down
      */
-    if ((y < MAX_Y(sp)) && !IS_EMPTY_CELL(sp->bd, x, y + 1)) {
+    if ((y < MAX_Y(sp)) && !IS_EMPTY_CELL(*bp, x, y + 1)) {
         dprintf("down is not empty\n");
         p->neighbor.b.down = YES;
         ret = YES;        
@@ -210,7 +213,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * upper left
      */
-    if ((x > 0) && (y > 0) && !IS_EMPTY_CELL(sp->bd, x - 1, y - 1)) {
+    if ((x > 0) && (y > 0) && !IS_EMPTY_CELL(*bp, x - 1, y - 1)) {
         dprintf("upper left is not empty\n");
         p->neighbor.b.upper_left = YES;
         ret = YES;        
@@ -218,7 +221,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * upper right
      */
-    if ((x < MAX_X(sp)) && (y > 0) && !IS_EMPTY_CELL(sp->bd, x + 1, y - 1)) {
+    if ((x < MAX_X(sp)) && (y > 0) && !IS_EMPTY_CELL(*bp, x + 1, y - 1)) {
         dprintf("upper right is not empty\n");
         p->neighbor.b.upper_right = YES;
         ret = YES;        
@@ -228,7 +231,7 @@ int check_empty(struct session *sp, struct put *p, int color)
      * lower left
      */
     if ((x > 0) && (y < MAX_Y(sp)) &&
-        !IS_EMPTY_CELL(sp->bd, x - 1, y + 1)) {
+        !IS_EMPTY_CELL(*bp, x - 1, y + 1)) {
         dprintf("lower left is not empty\n");
         p->neighbor.b.lower_left = YES;        
         ret = YES;        
@@ -236,7 +239,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * lower right
      */
-    if ((x < MAX_X(sp)) && (y < MAX_Y(sp)) && !IS_EMPTY_CELL(sp->bd,x + 1, y + 1)) {
+    if ((x < MAX_X(sp)) && (y < MAX_Y(sp)) && !IS_EMPTY_CELL(*bp,x + 1, y + 1)) {
         dprintf("lower right is not empty\n");
         p->neighbor.b.lower_right = YES;
         ret = YES;        
@@ -247,10 +250,20 @@ int check_empty(struct session *sp, struct put *p, int color)
         
 }
 
+
+
 int process_put(struct session *sp, struct put *p, int color)
 {
+    process_put_bd(sp, &(sp->bd), p, color);
+    return 0;
+}
+
+
+int process_put_bd(struct session *sp,
+                   struct board *bp,
+                   struct put *p, int color)
+{
     int x, y;
-    struct board *bp = &(sp->bd);
     
     dprintf("process_put\n");
     /*

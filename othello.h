@@ -23,6 +23,9 @@
 #define YES 1
 #define NO  0
 
+#define SUCCESS 1
+#define FAIL    -1
+
 #define SERVED 1
 #define PASS   2
 
@@ -40,9 +43,13 @@
 #define IS_ENDQ(wqp, topq) ((wqp) == &(topq))
 
 #define GET_TOP_ELEMENT(queue) (queue).next
+#define GET_LAST_ELEMENT(queue) (queue).prev
 #define CANDIDATE_TO_PUT(queue) (struct put *)((char *)queue - \
         offsetof(struct put, candidate))
 #define MAIN_TO_PUT(q) (struct put *)(q)
+#define DEPTH_TO_PUT(queue) (struct put *)((char *)queue - \
+        offsetof(struct put, depth))
+
 
 #define SET_NEIGHBOR(putp, direction) putp->neighbor.i |= (1UL << direction)
 #define CHECK_NEIGHBOR(putp, direction) putp->neighbor.i & (1UL << direction)
@@ -62,6 +69,12 @@
 
 #define CELL(bd, x, y) *(((bd).b) + (x) + (y) * (bd).ysize)
 #define IS_EMPTY_CELL(bd, x, y) (CELL(bd, x, y) == EMPTY)
+#define SET_CELL(bd, x, y, color) CELL(bd, x, y) = (color)
+
+#define player_type(type) ((type == HUMAN) ? "HUMAN" : "COMPUTER")
+
+#define Q_TO_DEPTH(queue) (struct depth *)((char *)queue - \
+        offsetof(struct depth, q))
 
 
 struct board 
@@ -125,7 +138,12 @@ struct put
         int i;
     } canget;
     int gettable;
-
+        /*
+         * only for level 4
+         */
+    struct queue depth;
+    struct queue next_depth;
+    struct board *bp;
 };
 
 struct config
@@ -137,6 +155,7 @@ struct config
     int debug_level;
     char remote_host[256];
     unsigned short remote_port;
+    int depth; /* tmp */
     int opt_b;
     int opt_h;
     int opt_p;
@@ -144,29 +163,37 @@ struct config
     int opt_m;
     int opt_f;
     int opt_d;
+    int opt_0;
+    int opt_1;
     int opt_3;
+    int opt_o;
+    int opt_v;
+    int opt_D;
 };
-#if 0
-struct scenario
-{
-    struct queue main;         /* struct scenario chain */
-    struct queue candidate;    /* struct put chain */
-};
-#endif
 
 #define HUMAN    0
 #define COMPUTER 1
+
+struct depth
+{
+    struct queue q;
+    int depth;
+    struct queue candidate;
+    struct queue next_depth;
+};
 
 struct player
 {
     int type;                           /* player type HUMAN/COMPUTER */
     int level;
     struct queue candidate;
+    struct queue depth;
 };
 
 #define NUM_PLAYER 2
 #define PLAYER_FIRST  0
 #define PLAYER_SECOND 1
+
 
 struct session
 {
@@ -175,11 +202,14 @@ struct session
     struct board bd;                    /* struct board */
     struct queue top;                   /* transcript queue */
     struct player player[NUM_PLAYER];   /* */
+    int counter;
     int turn;
     int was_pass;
     int is_end;
     void *buf;
 };
+
+
 
 
 #ifdef DEBUG1
@@ -199,6 +229,10 @@ struct session
  * command.c
  */
 extern void command_show(struct session *);
+extern int  command_status(struct session *);
+extern int  command_pass(struct session *, struct put *);
+extern int  command_save(struct session *);
+
 /*
  * output.c
  */
@@ -208,16 +242,21 @@ extern void initboard_format(void);
  * util.c
  */
 extern void append(struct queue *, struct queue *);
-void push(struct queue *, struct queue *);
-void delete(struct queue *);
+extern void push(struct queue *, struct queue *);
+extern void delete(struct queue *);
 extern struct put *allocput(void);
-void freeput(struct put *);
+extern void freeput(struct put *);
+extern void initput(struct put *);
+extern void init_depth(struct depth *, int);
+extern struct depth *alloc_depth(void);
+
 /*
  * put.c
  */
-extern int check_empty(struct session *, struct put *, int);
+extern int check_empty(struct session *, struct board *, struct put *, int);
 extern int process_put(struct session *, struct put *, int);
-extern int check_puttable(struct session *, struct put *, int);
+extern int check_puttable(struct session *, struct board *, struct put *, int);
+extern int process_put_bd(struct session *, struct board *, struct put *, int);
 /*
  * think.c
  */
@@ -231,15 +270,8 @@ extern int think_level4(struct session *, struct put *, int);
 /*
  * othello.c
  */
-extern char remote_host[256];
-extern unsigned short remote_port;
-extern int level;
-extern int boardsize;
-extern int mode;
-extern int serve_first;
-extern int debug_level;
-extern struct queue candidate;
-
+extern void init_depth(struct depth *, int);
+extern struct depth *alloc_depth(void);
 #endif /* _OTHELLO_H */
 
 

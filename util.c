@@ -56,12 +56,12 @@ struct put *allocput(void)
 {
     struct put *p;
     p = (struct put *)malloc(sizeof(struct put));
+    memset(p, 0x00, sizeof(struct put));
     if (p != NULL) {
         memset(p, 0x00, sizeof(struct put));
-        p->main.next = (struct queue *)&(p->main);
-        p->main.prev = (struct queue *)&(p->main);
-        p->candidate.next = (struct queue *)&(p->candidate);
-        p->candidate.prev = (struct queue *)&(p->candidate);
+        INITQ(p->main);
+        INITQ(p->candidate);
+        INITQ(p->next_depth);
     }
     return p;
 }
@@ -70,5 +70,41 @@ struct put *allocput(void)
 void freeput(struct put *p)
 {
     free((void *)p);
+}
+
+void initput(struct put *p)
+{
+    if (p != NULL) {
+        memset(p, 0x00, sizeof(struct put));
+        INITQ(p->main);
+        INITQ(p->candidate);
+        INITQ(p->depth);
+        INITQ(p->next_depth);        
+    }
+    return;
+}
+
+void init_depth(struct depth *dp, int depth)
+{
+    memset(dp, 0x00, sizeof(struct depth));
+    INITQ(dp->q);
+    dp->depth = depth;
+    INITQ(dp->candidate);
+    INITQ(dp->next_depth);
+    return;
+}
+
+struct depth *alloc_depth(void)
+{
+    struct depth *dp;
+    
+    dp = (struct depth *)malloc(sizeof(struct depth));
+    return dp;
+}
+
+void free_depth(struct depth *dp)
+{
+    free((void *)dp);
+    return;
 }
 
