@@ -17,12 +17,14 @@ int simple_search_candidate(struct session *sp, int color, struct queue *head)
 {
     struct board *bp = &(sp->bd);
     
-    return simple_search_candidate_mp(sp, bp, color, head, SINGLE_DEPTH, NULL);
+    return simple_search_candidate_mp(sp, bp, color, NULL,
+                                      head, SINGLE_DEPTH, NULL);
 }
 
 int simple_search_candidate_mp(struct session *sp,
                                struct board *bp,
                                int color,
+                               struct depth *dp,
                                struct queue *candidatep,
                                int mode,
                                struct queue *next_depthp)
@@ -42,7 +44,11 @@ int simple_search_candidate_mp(struct session *sp,
                 pcount++;
                 dprintf("simple_search_candidate_mp: found cell (%c%d), num=%d, gettable=%d, %p\n",
                          (int)x + 'A' , y + 1, pcount, putp->gettable, putp);
+                if (dp != NULL) {
+                    dp->num_cand++;
+                }
                 if (mode == SINGLE_DEPTH) {
+                    dprintf("appending %p\n", putp);
                     append(candidatep, &(putp->candidate));
                 } else {
                     append(candidatep, &(putp->candidate));
@@ -79,8 +85,8 @@ void cleanup_candidates(struct queue *canp)
         qsavep = qp->next;
         dprintf("deleting qp=%p\n", qp);
         putp = CANDIDATE_TO_PUT(qp);
-        delete(&putp->candidate);
-        delete(&putp->depth);
+        delete(&(putp->candidate));
+        delete(&(putp->depth));
         if (putp->bp != NULL) {
             freeboard(putp->bp);
         }
@@ -577,6 +583,7 @@ int search_next_depth(struct session *sp, int depth, int myself, int this_turn)
         pcount = simple_search_candidate_mp(sp,
                                             &(sp->bd),
                                             this_turn,
+                                            dp,
                                             &(dp->candidate),
                                             MULTIPLE_DEPTH,
                                             &(sp->player[sp->turn].next_depth));
@@ -611,10 +618,11 @@ int search_next_depth(struct session *sp, int depth, int myself, int this_turn)
             pcount = simple_search_candidate_mp(sp,
                                                 putp->bp,
                                                 this_turn,
+                                                dp,
                                                 &(dp->candidate),
                                                 MULTIPLE_DEPTH,
                                                 &(putp->next_depth));
-            printf("search_next_depth: found %d cells. (depth=%d)\n",
+            dprintf("search_next_depth: found %d cells. (depth=%d)\n",
                     pcount, depth);
             accum += pcount;
             dp->num_cand = pcount;            
@@ -857,7 +865,7 @@ tdprintf("found puttable cell (%c%d) on borders on 2nd next depth of (%c%d)\n",
     
  
     if (CHECK_STRATEGY(strategy, STRATEGY_RANDOM)) {
-     
+        dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
         if ((corner == NO) && (border == NO)) {
             int i, end, found = NO;
             tdprintf("No corner or border cell.\n");
@@ -866,13 +874,12 @@ tdprintf("found puttable cell (%c%d) on borders on 2nd next depth of (%c%d)\n",
                  *   num_cand cannot not be 0, otherwise BUG
                  */
             if (dp->num_cand == 0) {
-                printf("Internal inconsistency: simple_strategy, num_cand=0\n");
+                printf("Internal inconsistency: simple_strategy, dp=%p, num_cand=0\n", dp);
                 exit(255);
             }
             
             end = orand(dp->num_cand);
             end = end % dp->num_cand + 1;
-            dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
             qp = GET_TOP_ELEMENT(dp->candidate);
             i = 1;
             while (!IS_ENDQ(qp, dp->candidate)) {
@@ -1051,11 +1058,7 @@ int think_level4(struct session *sp, struct put *p, int color)
     sp->player[sp->turn].num_candidate = totalcand;
 #endif
     dprintf("num_put is %d\n", num_put);
-    if (1) {
-        struct queue *q;
-        struct depth *d;
-        struct put *wput;
-        d = Q_TO_DEPTH(GET_TOP_ELEMENT((sp->player[sp->turn].depth)));
+    if (0) {
         print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
     }
 
@@ -1083,7 +1086,9 @@ int think_level4(struct session *sp, struct put *p, int color)
 /* ************************************************************************ */
 
 
-void append_passput(struct session *sp, struct depth *dp,
+void append_passput(struct session *sp,
+                    struct depth *dp,
+                    struct board *bp,
                     struct queue *next_depthp, int color)
 {
     struct put *putp;
@@ -1092,11 +1097,13 @@ void append_passput(struct session *sp, struct depth *dp,
     putp->color = color;
     putp->p.x = -1;
     putp->p.y = -1;
+    putp->bp = dup_board(sp, bp);
 #if 0
     dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
 #endif
     append(&(dp->candidate), &(putp->candidate));
     append(next_depthp, &(putp->depth));
+    dp->num_cand++;
 }
 
 
@@ -1242,6 +1249,7 @@ void cleanup_top_depth(struct session *sp, struct depth *dp, struct put *uputp)
 #define START_ZERO       0x000010
 #define START_FROM       0x000020
 #define EXCEPT_GIVEN     0x000040
+#define WINNABLE         0x000080
 
 struct put *have_candidates(struct session *sp,
                             struct board *bp,
@@ -1249,6 +1257,7 @@ struct put *have_candidates(struct session *sp,
                             struct queue *next_depthp,
                             struct put *startputp,
                             int this_turn,
+                            int depth,
                             int mode)
 {
     int x, y, found = NO, accum = 0;
@@ -1339,6 +1348,11 @@ struct put *have_candidates(struct session *sp,
                 
                 calculate_score(putp->bp,
                                 &(putp->black), &(putp->white));
+                if ((mode & WINNABLE) &&
+                    (depth == (sp->bd.xsize * sp->bd.ysize -
+                               get_occupied_cell_num(sp)))) {
+                    printf("Bottom depth. Evaluate winnable?\n ");
+                }
                 
                 if (mode & EVERY_CANDIDATE) {
                     if (first_putp == NULL) {
@@ -1375,15 +1389,16 @@ int search_depth_vertical(struct session *sp,
                           struct put *startputp)
 {
     int ret;
-    int retcode, count;
+    int retcode;
+    int count;
     struct put *wputp;
     struct queue *qp;
     struct depth *dp;
     
-    
     dprintf("search_depth_vertical: called. depth/max=%d/%d, color=%d\n",
              start_depth, max_depth, this_turn);
-    
+
+    retcode = YES;
     if (start_depth <= max_depth) {
         /*
          * search struct depth for this start_depth, and alocate one
@@ -1407,8 +1422,8 @@ int search_depth_vertical(struct session *sp,
                 initdepth(dp, start_depth);
                 append(&(sp->player[sp->turn].depth), &(dp->q));
             } else {
-                printf("search_next_depth: allocdepth() failed.\n");
-                return FAIL;
+                printf("search_depth_vertical: allocdepth() failed.\n");
+                exit(255);
             }
         }
         /*
@@ -1420,6 +1435,7 @@ int search_depth_vertical(struct session *sp,
                                 next_depthp,
                                 startputp,
                                 this_turn,
+                                start_depth,
                                 ONE_CANDIDATE | START_ZERO);
         
         if (wputp != NULL) {
@@ -1428,13 +1444,31 @@ int search_depth_vertical(struct session *sp,
              */
             dprintf("search_depth_vertical: checking recursively by(%c%d).\n",
                (int)wputp->p.x + 'A' , wputp->p.y + 1);
-            
-            dprintf("appending cand %p to dp %p\n",
-                    &(wputp->candidate), dp);
-            append(&(dp->candidate), &(wputp->candidate));
-            dp->num_cand++;
+            dprintf("appending cand %p to dp %p\n", &(wputp->candidate), dp);
             dprintf("appending cand %p to nd %p\n",
                     &(wputp->depth), next_depthp);
+#ifdef DEBUG
+            if ((start_depth == (sp->bd.xsize * sp->bd.ysize -
+                           get_occupied_cell_num(sp))) &&
+                ((sp->turn == BLACK) ?
+                 (wputp->black > wputp->white) :
+                 (wputp->white > wputp->black))) {
+                
+                printf("Bottom. WINNABLE (%c%d) (%d/%d)\n",
+                       wputp->p.x + 'A', wputp->p.y,
+                       wputp->black, wputp->white);                       
+            } else {
+                printf("Bottom. NOT WINNABLE (%c%d) (%d/%d)\n",
+                       wputp->p.x + 'A', wputp->p.y,
+                       wputp->black, wputp->white);
+                retcode = NO;
+                    /* free wput */
+                return retcode;
+            }
+#endif
+            
+            dp->num_cand++;
+            append(&(dp->candidate), &(wputp->candidate));
             append(next_depthp, &(wputp->depth));
            
             ret = search_depth_vertical(sp,
@@ -1443,30 +1477,34 @@ int search_depth_vertical(struct session *sp,
                                         OPPOSITE_COLOR(this_turn),
                                         &(wputp->next_depth),
                                         wputp);
-            if (ret < 0) {
-                ;
+            if (ret == NO) {
+                printf("search_depth_vertical: recursive call failed.\n");
+                exit(255);
             }
+#if 0
+            else if (ret == NO) {
+                print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
+                exit(255);
+            }
+#endif
             
         } else {
             /*
              * This turn is PASS.
              */
             printf("search_depth_vertical: depth=%d PASS\n", start_depth);
-            retcode = -1;
-#if 0
+/* DEBUG */
             append_passput(sp,
                            dp,
+                           startputp->bp,
                            next_depthp,
                            this_turn);
-#endif
         }
-        
         
     } else {
         /*
          * bottom
          */
-        return 0;
     }
     
     return retcode;
@@ -1475,11 +1513,13 @@ int search_depth_vertical(struct session *sp,
 /*
  * For think_level5.
  */
-int vertical_oriented_search(struct session *sp, struct put *p, int color)
+int vertical_oriented_search(struct session *sp,
+                             int color, int restcells)
 {
     int this_turn;
     int depth;    
     int ret;
+    int retcode;
     int dc;
     int start_depth;
     int max_depth;    
@@ -1487,6 +1527,12 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
     struct queue *qp;
     struct put *putp;
 
+#if 1
+    max_depth = restcells;
+#else
+    max_depth = sp->cfg.depth;
+#endif
+    retcode = YES;
     /*
      * checek whether I have vertical searched candidate tree
      */
@@ -1502,7 +1548,7 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
             /*
              * FAIL
              */
-            printf("think_level5: search_depth() failed.\n");
+            printf("vertical_oriented_search: search_depth() failed.\n");
             exit(255);
             
         } else if ((depth == 1) && (ret == 0)) {
@@ -1510,18 +1556,20 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
              * PASS
              */
 #if 0
-            tdprintf("think_level5: depth=1 is PASS!\n");
+            tdprintf("vertical_oriented_search: depth=1 is PASS!\n");
             putp = allocput();
             putp->color = color;
             putp->p.x = -1;
             putp->p.y = -1;
 #endif
             dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
-            append_passput(sp, dp, &(sp->player[sp->turn].next_depth), color);
+            append_passput(sp, dp, &(sp->bd),
+                           &(sp->player[sp->turn].next_depth), color);
 #if 0
             append(&(dp->candidate), &(putp->candidate));
             append(&(sp->player[sp->turn].next_depth), &(putp->depth));
 #endif
+            retcode = NO;
         }
         tdprintf("search_depth returns. num_put is %d\n", num_put);
             /*
@@ -1534,7 +1582,7 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
             dprintf("calling search_depth_veritical for (%c%d)\n\n",
                    (int)putp->p.x + 'A', putp->p.y + 1);
             search_depth_vertical(sp,
-                                  sp->cfg.depth,            /* max_depth */
+                                  max_depth,                /* max_depth */
                                   3,                        /* start depth */
                                   sp->turn,                 /* this_turn */
                                   &(putp->next_depth),      /* next_depth QH */
@@ -1570,10 +1618,16 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
         qp = GET_TOP_ELEMENT(sp->player[sp->turn].next_depth);
         dprintf("is_endq of sp:player:next_depth is %d\n",
                IS_EMPTYQ(sp->player[sp->turn].next_depth));
-        
+/* BUG!. When the opposite player passes, consideration must be added. */
         while (!IS_ENDQ(qp, sp->player[sp->turn].next_depth)) {
             qpsave = qp->next;
             putp = DEPTH_TO_PUT(qp);
+            if (putp->p.x == -1) {
+                printf("previous put is PASS\n");
+                print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
+                exit(255);
+            }
+            
             dprintf("color=%d (%c%d) %p\n", putp->color,
                     (int)putp->p.x + 'A', putp->p.y + 1, putp);
             if (IS_SAME_CELL(wputp, putp)) {
@@ -1631,10 +1685,10 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
         dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
         putp = CANDIDATE_TO_PUT(GET_TOP_ELEMENT(dp->candidate));
 #if 0
-        dprintf("\nthink_level5: putp=%p (%c%d) \n",
+        dprintf("\nvertical_oriented_search: putp=%p (%c%d) \n",
                putp, putp->p.x + 'A', putp->p.y + 1);
         output(&(sp->bd));     /* DEBUG */
-        printf("think_level5: top dp->candidate is putp=%p (%c%d) %d emp:%d\n",
+        printf("vertical_oriented_search: top dp->candidate is putp=%p (%c%d) %d emp:%d\n",
                putp, putp->p.x + 'A', putp->p.y + 1,
                putp->color, IS_EMPTYQ(dp->candidate)
                );
@@ -1658,6 +1712,7 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
                         &(sp->player[sp->turn].next_depth),
                         putp,
                         color,
+                        1,
                         EVERY_CANDIDATE | EXCEPT_GIVEN);
         
 #if 0        
@@ -1714,6 +1769,7 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
                             &(putp->next_depth),
                             startputp,
                             OPPOSITE_COLOR(color),
+                            2,
                             search_mode);
             qp = qp->next;
         }
@@ -1795,7 +1851,7 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
             printf("start_depth is %d, putp=%p\n", start_depth, putp);
 #endif
             search_depth_vertical(sp,
-                                  sp->cfg.depth,            /* max_depth */
+                                  max_depth,            /* max_depth */
                                   start_depth,              /* start depth */
                                   sp->turn,                 /* this_turn */
                                   &(putp->next_depth),      /* next_depth QH */
@@ -1837,6 +1893,7 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
 #endif
 
     }
+    return retcode;
 }
 
 
@@ -1845,6 +1902,7 @@ int vertical_oriented_search(struct session *sp, struct put *p, int color)
 int think_level5(struct session *sp, struct put *p, int color)
 {
     int retcode, pcount, ret, totalcand = 0, restcells, x, y;
+    int throughout = NO;
     struct put *putp, *tmpput;
     struct queue *qp;
     int depth, this_turn, max_depth, start_depth;
@@ -1862,365 +1920,30 @@ int think_level5(struct session *sp, struct put *p, int color)
     dprintf("restcells = %d\n", restcells);
     
     tdprintf("think_level5 start. num_put is %d\n", num_put);
+#define VERTICAL_HWM 15
+#define VERTICAL_LWM 3
+    if ((restcells > VERTICAL_HWM) ||
+        (restcells <= VERTICAL_LWM)) {
 
-    vertical_oriented_search(sp, p, color);
-    
-if (0) {
+        dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
+        cleanup_next_depth_all(&(sp->player[sp->turn].next_depth));
+        cleanup_depth(&(sp->player[sp->turn].depth));
+
         
-    /*
-     * checek whether I have vertical searched candidate tree
-     */
-    if (IS_EMPTYQ(sp->player[sp->turn].depth)) {
-        printf("This is the first vertical searched candidate tree build.\n");
-        /*
-         * search level=1 candidates
-         */
-        this_turn = color;
-        depth = 2;
-        ret = search_depth(sp, depth);
-        if (ret == FAIL) {
-            /*
-             * FAIL
-             */
-            printf("think_level5: search_depth() failed.\n");
-            exit(255);
-            
-        } else if ((depth == 1) && (ret == 0)) {
-            /*
-             * PASS
-             */
-#if 0
-            tdprintf("think_level5: depth=1 is PASS!\n");
-            putp = allocput();
-            putp->color = color;
-            putp->p.x = -1;
-            putp->p.y = -1;
-#endif
-            dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
-            append_passput(sp, dp, &(sp->player[sp->turn].next_depth), color);
-#if 0
-            append(&(dp->candidate), &(putp->candidate));
-            append(&(sp->player[sp->turn].next_depth), &(putp->depth));
-#endif
+        ret = search_depth(sp, sp->cfg.depth);
+        if (ret == NO) {
+            printf("think_level5: search_depth failed.\n");
+                /* PASS .  TBD !!!! */
+            return NO;
         }
-        tdprintf("search_depth returns. num_put is %d\n", num_put);
-            /*
-             * search next level candidates
-             */
-        dp = Q_TO_DEPTH(GET_LAST_ELEMENT(sp->player[sp->turn].depth));
-        qp = GET_TOP_ELEMENT(dp->candidate);
-        while (!IS_ENDQ(qp, dp->candidate)) {
-            putp = CANDIDATE_TO_PUT(qp);
-            dprintf("calling search_depth_veritical for (%c%d)\n\n",
-                   (int)putp->p.x + 'A', putp->p.y + 1);
-            search_depth_vertical(sp,
-                                  sp->cfg.depth,            /* max_depth */
-                                  3,                        /* start depth */
-                                  sp->turn,                 /* this_turn */
-                                  &(putp->next_depth),      /* next_depth QH */
-                                  putp);                    /* start  put */
-            qp = qp->next;
-        }
-#if 0        
-        print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
-#endif   
+        
     } else {
-        /*
-         * 2nd stage and after
-         */
-        struct put *prevputp;
-        struct put *wputp;
-        struct queue *qpsave;
-        
-        dprintf("I have pre-built candidate tree.\n");
-
-        /*
-         * PHASE1: search given put in the depth=1 candidate tree
-         */
-#if 0
-        qp = GET_TOP_ELEMENT(sp->player[sp->turn].depth);
-        while (!IS_ENDQ(qp, sp->player[sp->turn].depth)) {
-            dp = Q_TO_DEPTH(qp);
-            printf("dp=%p, IS_EMPTY(cand)=%d\n", dp, IS_EMPTYQ(dp->candidate));
-            qp = qp->next;
-        }
-#endif        
-        prevputp = NULL;
-        wputp = MAIN_TO_PUT(GET_LAST_ELEMENT(sp->top));
-        qp = GET_TOP_ELEMENT(sp->player[sp->turn].next_depth);
-        dprintf("is_endq of sp:player:next_depth is %d\n",
-               IS_EMPTYQ(sp->player[sp->turn].next_depth));
-        
-        while (!IS_ENDQ(qp, sp->player[sp->turn].next_depth)) {
-            qpsave = qp->next;
-            putp = DEPTH_TO_PUT(qp);
-            dprintf("color=%d (%c%d) %p\n", putp->color,
-                    (int)putp->p.x + 'A', putp->p.y + 1, putp);
-            if (IS_SAME_CELL(wputp, putp)) {
-                dprintf("Found is previous put.\n");
-                prevputp = putp;
-            } else {
-                /*
-                 * clean up candidate trees below not used puts of
-                 * opposite player
-                 */
-                cleanup_one_candidate_tree(putp);
-                delete(&(putp->candidate));
-                delete(&(putp->depth));
-            }
-            qp = qpsave;
-        }
-
-        putp = prevputp;
-#if 0
-        printf("given put is %p (%c%d)\n", putp,
-               (int)putp->p.x + 'A', putp->p.y + 1);
-        
-        print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
-#endif
-        /*
-         * PHASE2: cleanup gotten put and its struct depth
-         */
-        dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
-
-        dprintf("dp=%p, candidate is %d\n", dp, IS_EMPTYQ(dp->candidate));
-        
-        delete(&(putp->candidate));
-        delete(&(putp->depth));
-        
-        requeue_all(&(putp->next_depth), &(sp->player[sp->turn].next_depth));
-        
-        freeput(putp);
-        delete(&(dp->q));
-        freedepth(dp);
-        dprintf("\ncleaned up candidate tree\n");
-#if 0
-        print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
-        
-        qp = GET_TOP_ELEMENT(sp->player[sp->turn].depth);
-        while (!IS_ENDQ(qp, sp->player[sp->turn].depth)) {
-            dp = Q_TO_DEPTH(qp);
-            printf("dp=%p, IS_EMPTY(cand)=%d\n", dp, IS_EMPTYQ(dp->candidate));
-            qp = qp->next;
-        }
-#endif
-
-        /*
-         * PHASE3: rebuild possible candidates of depth=1
-         */
-        dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
-        putp = CANDIDATE_TO_PUT(GET_TOP_ELEMENT(dp->candidate));
-#if 0
-        dprintf("\nthink_level5: putp=%p (%c%d) \n",
-               putp, putp->p.x + 'A', putp->p.y + 1);
-        output(&(sp->bd));     /* DEBUG */
-        printf("think_level5: top dp->candidate is putp=%p (%c%d) %d emp:%d\n",
-               putp, putp->p.x + 'A', putp->p.y + 1,
-               putp->color, IS_EMPTYQ(dp->candidate)
-               );
-
-        qp = GET_TOP_ELEMENT(sp->player[sp->turn].depth);
-        while (!IS_ENDQ(qp, sp->player[sp->turn].depth)) {
-            struct depth *wdp;
-            wdp = Q_TO_DEPTH(qp);
-            printf("dp=%p, cand=%d\n", wdp, IS_EMPTYQ(wdp->candidate));
-            qp = qp->next;
-        }
-        printf("1: next_depth=%p, n:%p/p:%p\n",
-               &(sp->player[sp->turn].next_depth),
-               sp->player[sp->turn].next_depth.next,
-               sp->player[sp->turn].next_depth.prev);
-        printf("\n");
-#endif
-        have_candidates(sp,
-                        &(sp->bd),
-                        dp,
-                        &(sp->player[sp->turn].next_depth),
-                        putp,
-                        color,
-                        EVERY_CANDIDATE | EXCEPT_GIVEN);
-        
-#if 0        
-        printf("\nrebuilt candidate tree\n");
-        dprintf("2: next_depth=%p, n:%p/p:%p\n",
-               &(sp->player[sp->turn].next_depth),
-               sp->player[sp->turn].next_depth.next,
-               sp->player[sp->turn].next_depth.prev);
-
-        printf("\nafter have_candidates check!\n");
-        qp = GET_TOP_ELEMENT(sp->player[sp->turn].depth);
-        while (!IS_ENDQ(qp, sp->player[sp->turn].depth)) {
-            struct queue *xqp;
-            dp = Q_TO_DEPTH(qp);
-            xqp = GET_TOP_ELEMENT(dp->candidate);
-            printf("dp=%p, IS_EMPTY(cand)=%d\n", dp, IS_EMPTYQ(dp->candidate));
-            while (!IS_ENDQ(xqp, dp->candidate)) {
-                struct put *xputp;
-                xputp = CANDIDATE_TO_PUT(xqp);
-                printf("p=%p, (%c%d) %d\n", xputp,
-                       xputp->p.x + 'A', xputp->p.y + 1, xputp->color);
-                xqp = xqp->next;
-            }
-            qp = qp->next;
-        }
-        print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
-        
-        printf("\ncompleting depth=2 search \n");
-#endif
-        /*
-         * PHASE4: complete depth=2 candidates
-         */
-        qp = GET_TOP_ELEMENT(sp->player[sp->turn].depth);
-        qp = qp->next;
-        dp = Q_TO_DEPTH(qp);
-        qp = GET_TOP_ELEMENT(sp->player[sp->turn].next_depth);
-        while (!IS_ENDQ(qp, sp->player[sp->turn].next_depth)) {
-            struct put *startputp;
-            int search_mode;
-            putp = DEPTH_TO_PUT(qp);
-#if 0
-            printf("completing (%c%d)\n", putp->p.x + 'A', putp->p.y + 1);
-#endif
-            if (IS_EMPTYQ(putp->next_depth)) {
-                startputp = NULL;
-                search_mode = EVERY_CANDIDATE | START_ZERO;
-            } else {
-                startputp = DEPTH_TO_PUT(GET_TOP_ELEMENT(putp->next_depth));
-                search_mode = EVERY_CANDIDATE | EXCEPT_GIVEN;
-            }
-            have_candidates(sp,
-                            putp->bp,
-                            dp,
-                            &(putp->next_depth),
-                            startputp,
-                            OPPOSITE_COLOR(color),
-                            search_mode);
-            qp = qp->next;
-        }
-#if 0
-        print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
-#endif
-       /*
-        * PHASE5: rebuild depth>=3 candidate tree
-        */
-#if 0
-        printf("\ncompleting depth>=3 search %d\n\n", sp->cfg.depth);
-#endif
-        /*
-         * First of all, search the current depth=2 struct depth
-         */
-        if (0) {/* debug! */
-            dc = 1;
-            qp = GET_TOP_ELEMENT(sp->player[sp->turn].depth);
-            while (!IS_ENDQ(qp, sp->player[sp->turn].depth)) {
-                dp = Q_TO_DEPTH(qp);
-                if (dc >= 2) {
-                    break;
-                }
-                dc++;
-                qp = qp->next;
-            }
-        } else {
-            qp = GET_TOP_ELEMENT(sp->player[sp->turn].depth);
-            qp = qp->next;
-            dp = Q_TO_DEPTH(qp);
-        }
-
-        /*
-         * Second, build a candidate tree by searching vertically
-         * starting from depth=2 candidates.
-         * Here, dp holds ptr. for the depth=2 struct depth
-         */
-        qp = GET_TOP_ELEMENT(dp->candidate);
-        while (!IS_ENDQ(qp, dp->candidate)) {
-            putp = CANDIDATE_TO_PUT(qp);
-            start_depth = 3;
-#if 0
-            printf("calling search_depth_veritical for p:%p (%c%d)\n",
-                   putp, (int)putp->p.x + 'A', putp->p.y + 1);
-#endif
-            if (!IS_EMPTYQ(putp->next_depth)) {
-                /*
-                 * In this case, this put has lower depth tree,
-                 * start from the bottom.
-                 */
-                struct queue *xqp;
-                struct put *xputp;
-#if 0
-                printf("This put has vertical tree. Adjusting.\n");
-#endif
-                dc = 2;
-                xputp = putp;
-                while (1)  {
-#if 0
-                    printf("dc=%d, xp=%p, (%c%d) %d\n", dc, xputp,
-                           xputp->p.x + 'A', xputp->p.y + 1, xputp->color);
-#endif
-                    if (IS_EMPTYQ(xputp->next_depth)) {
-                        break;
-                    } else {
-                        xqp = GET_TOP_ELEMENT(xputp->next_depth);
-                        xputp = DEPTH_TO_PUT(xqp);
-                        dc++;
-                    }
-                }
-                /* Here, xputp holds the bottom level candidate put */
-                start_depth = dc + 1;
-                putp = xputp;
-                if (start_depth >= max_depth) {
-                    goto exit1;
-                }
-            }
-#if 0
-            printf("start_depth is %d, putp=%p\n", start_depth, putp);
-#endif
-            search_depth_vertical(sp,
-                                  sp->cfg.depth,            /* max_depth */
-                                  start_depth,              /* start depth */
-                                  sp->turn,                 /* this_turn */
-                                  &(putp->next_depth),      /* next_depth QH */
-                                  putp);                    /* start  put */
-#if 0
-            {
-            struct queue *xqp;
-            xqp = GET_TOP_ELEMENT(putp->next_depth);
-            printf("search_depth_vertical returned.\nputp=%p, (%c%d) %d\n",
-                   putp, putp->p.x + 'A', putp->p.y + 1, putp->color);
-            while (!IS_ENDQ(xqp, putp->next_depth)) {
-                struct put *xputp;
-                xputp = DEPTH_TO_PUT(xqp);
-                printf("p=%p, (%c%d) %d\n", xputp,
-                       xputp->p.x + 'A', xputp->p.y + 1, xputp->color);
-                xqp = xqp->next;
-            }
-            }
-
-#endif
-          exit1:
-            
-            qp = qp->next;
-        }
-
-#if 0
-        print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
-        exit(255);
-            for (x = 0; x < sp->bd.xsize; x++) {
-                for (y = 0; y < sp->bd.ysize; y++) {
-                    if (CELL(sp->bd, x, y) != CELL(*(putp->bp), x, y))
-                        printf("(%c%d) is not identical!!! sp/put=%d/%d\n",
-                               x + 'A', y + 1,
-                               CELL(sp->bd, x,y), CELL(*(putp->bp), x, y)
-                               );
-                }
-            }
-            printf("scan end.\n");
-#endif
-
+        throughout = YES;
+        vertical_oriented_search(sp, color, restcells);
     }
-
-}/* just below 'vertical_oriented_search' */
     
-    tdprintf("search_depth_vertical returns. num_put is %d\n", num_put);
+    tdprintf("searching end. num_put is %d/throughout=%d\n",
+             num_put, throughout);
 /* DEBUG !!! */            
 #if 0
     print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
@@ -2239,10 +1962,20 @@ if (0) {
     tdprintf("use (%c%d), gettable=%d\n", (int)p->p.x + 'A',
            p->p.y + 1, p->gettable);
     /*
-     * cleanup puts except the candidate tree under the put used above
+     * cleanup
      */
-    dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
-    cleanup_top_depth(sp, dp, tmpput);
+    if (throughout == YES) {
+        dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
+        cleanup_top_depth(sp, dp, tmpput);
+    } else {
+        /*
+         * cleanup puts except the candidate tree under the put used above
+         */
+        dp = Q_TO_DEPTH(GET_TOP_ELEMENT(sp->player[sp->turn].depth));
+        cleanup_next_depth_all(&(sp->player[sp->turn].next_depth));
+        cleanup_depth(&(sp->player[sp->turn].depth));
+    }
+    
 /* DEBUG !!! */
 #if 0
     print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
