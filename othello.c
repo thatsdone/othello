@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <sys/fcntl.h>
+#include <sys/stat.h>
+#include <sys/time.h>
 
 #include "othello.h"
 
@@ -167,6 +171,12 @@ int getcommand(struct session *sp, struct put *putp)
     } else if (strcmp(bufp, "status") == 0) {
         return COMMAND_STATUS;
         
+    } else if (strncmp(bufp, "save", 4) == 0) {
+        sp->buf = malloc(strlen(bufp) + 1);
+        strcpy(sp->buf, bufp);
+        dprintf("input is %s\n", sp->buf);
+        return COMMAND_SAVE;
+        
     } else if (strcmp(bufp, "quit") == 0) {
         return COMMAND_QUIT;
         
@@ -286,6 +296,92 @@ int serve_computer(struct session *sp, int player)
     return SERVED;
 }
 
+int command_save(struct session *sp)
+{
+    char *alphastr = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPWRSTUVWXYZ";
+    char *c;
+    char *filename;
+    int fd;
+    int i;
+    FILE *fp;
+    struct queue *qp;
+    struct put *putp;
+    time_t t;
+    char timestr[256];
+    struct tm *tmp;
+    
+    c = (char *)(sp->buf + 4);
+    while (*c == ' ') {
+        c++;
+    }
+    filename = c;
+    dprintf("filename is %s\n", filename);
+#define CFILE_MODE  (S_IWUSR|S_IRUSR|S_IRGRP|S_IROTH)
+#define CFILE_FLAGS (O_RDWR | O_CREAT | O_EXCL)
+    fd = open(filename, CFILE_FLAGS, CFILE_MODE);
+    if (fd < 0) {
+        printf("open failed (%d: %s)\n", errno, strerror(errno));
+        return NO;
+    }
+    dprintf("fd is %d\n", fd);
+    
+    fp = fdopen(fd, "r+");
+    if (fp == NULL) {
+        printf("fdopen failed.(%d)\n", errno);
+        printf("");
+        close(fd);
+        return NO;
+    }
+
+    fprintf(fp, "(;\n");
+        /* File Format */
+    fprintf(fp, "FF[4]\n");
+        /* Game type  */
+    fprintf(fp, "GM[2]\n");    
+        /* board size */
+    fprintf(fp, "SZ[%d]\n", sp->cfg.boardsize);
+        /* date */
+    fprintf(fp, "GN[marc othello %s]\n", VERSION);
+        /* date */
+    t = time(&t);
+    strcpy(timestr, ctime(&t));
+    tmp = localtime(&t);
+    
+    timestr[strlen(timestr) - 1] = (char)0x00;
+    
+    fprintf(fp, "DT[%s]\n", timestr);
+
+    qp = GET_TOP_ELEMENT(sp->top);
+    
+    while (qp !=  &(sp->top)) {
+        putp = MAIN_TO_PUT(qp);
+        if (putp->color == BLACK) {
+            fprintf(fp, ";B[");
+        } else {
+            fprintf(fp, ";W[");
+        }
+        
+        if (putp->p.x != -1 ){
+            fprintf(fp, "%c%c]\n",
+                    (int)*(alphastr + putp->p.x),
+                    (int)*(alphastr + putp->p.y));
+        } else {
+                /* pass */
+            fprintf(fp, "]\n");
+        }
+        qp = qp->next;
+    }
+    
+    fprintf(fp, ")\n");
+    fflush(fp);
+    fclose(fp);
+    
+    printf("log file '%s' saved.\n", filename);
+    
+    return YES;
+}
+
+
 #define player_type(type) ((type == HUMAN) ? "HUMAN" : "COMPUTER")
 
 int command_status(struct session *sp)
@@ -299,7 +395,6 @@ int command_status(struct session *sp)
     printf("\n");
     
 }
-
 int command_pass(struct session *sp, struct put *putp)
 {
     int x, y, ret;
@@ -345,10 +440,11 @@ int serve_human(struct session *sp, int player)
     struct put *putp;
 
     dprintf("serve_human\n");
+#if 0
     if (sp->is_end != YES) {
         output(&(sp->bd));
     }
-    
+#endif
     
     putp = allocput();
     
@@ -362,13 +458,14 @@ int serve_human(struct session *sp, int player)
         if (ret == YES) {
             CELL(sp->bd, putp->p.x, putp->p.y) = putp->color;
             append(&(sp->top), &(putp->main));
-            process_put(sp, putp, putp->color); 
+            process_put(sp, putp, putp->color);
+            output(&(sp->bd));            
             sp->is_end = increment_cell_num(sp);
             if (sp->is_end == YES) {
                 finalize(&(sp->bd));
             }
             sp->was_pass = NO;
-            FLIP_COLOR(sp);        
+            FLIP_COLOR(sp);
         }
         break;
             
@@ -390,6 +487,7 @@ int serve_human(struct session *sp, int player)
         break;
             
     case COMMAND_SAVE:
+        command_save(sp);
         break;
             
     case COMMAND_LOAD:
@@ -433,7 +531,7 @@ int serve_player(struct session *sp, int player)
     {
         int black, white;
         calculate_score(&(sp->bd), &black, &white);
-        printf("COUNT: %d, TURN: %d, BLACK:%d, WHITE:%d\n",
+        printf("\nCOUNT: %d, TURN: %d, BLACK:%d, WHITE:%d\n",
                get_occupied_cell_num(),
                sp->turn, black, white);
     }
@@ -478,6 +576,8 @@ void game(struct session *sp)
     int pass;
 
 #define WHICH_TURN(sp) (sp)->turn
+    if (mode == MODE_HUMAN_COMPUTER)
+        output(&(sp->bd));
     
     while (1) {
         switch(WHICH_TURN(sp)) {
