@@ -142,6 +142,92 @@ int choose_corner_border(struct queue *candidatep,
     
     return retcode;
 }
+#if 0
+#define HORIZONTAL     1
+#define VERTICAL       2
+#define DIAGONAL       3
+#define INV_DIAGONAL   4
+
+int is_a_good_choice(struct board *bp, struct put *p, int direction)
+{
+    int retcode;
+    int x, y;
+
+    int before_myself = YES;
+
+    int same_color_exist = NO;
+    int opposite_color_exist = NO;
+    
+        /* for before side check */
+    int first_stone_color = EMPTY;
+
+    int dangerous = NO;
+    
+    
+    if (IS_CORNER(p)) {
+        return -1;
+    }
+    
+    y = p->p.y;
+    for (x = 0; x < bordsize; x++) {
+
+        if (x == p->p.x) {
+                /* check the before half */
+            before_myself = NO;
+            same_color_exist = NO;
+            opposite_color_exist = NO;
+            continue;
+        }
+        
+        
+        if (bp->x[x][y] == p->color) {
+            /* SAME COLOR */
+            if (before_myself == YES) {
+                ;
+                
+            } else {
+                ;
+                
+            }
+            
+        } else if (bp->[x][y] == OPPOSITE_COLOR(p->color)) {
+            /* OPPOSITE COLOR */
+            if (before_myself == YES) {
+                ;
+            } else {
+                ;
+            }
+            
+        } else {
+            /* EMPTY */
+            ;
+            
+        }
+
+        /* check the after half */
+
+        
+        
+#if 0            
+        
+        if (before_myself == YES) {
+            if (bp->b[x][y] == p->color) {
+                ;
+            }
+            
+        } else {
+            
+        }
+#endif        
+    }
+    
+    
+    ;
+    return retcode;
+}
+#endif
+
+
 
 /*
  * (0) level 0 --- no-brain approach
@@ -317,7 +403,9 @@ int think_level3(struct board *bp, struct put *p, int color)
                 tdprintf("border check both sides x=%d\n", putp->p.x);
                     
                 if (CHECK_NEIGHBOR(putp, UP) &&
-                    CHECK_NEIGHBOR(putp, DOWN)) {
+                    CHECK_NEIGHBOR(putp, DOWN) &&
+                    (bp->b[putp->p.x][putp->p.y - 1] ==
+                     bp->b[putp->p.x][putp->p.y + 1])) {
                     tdprintf("Both of up and down exist.\n");
                         
                     bgputp = putp;
@@ -345,7 +433,9 @@ int think_level3(struct board *bp, struct put *p, int color)
                 tdprintf("hara\n");
                     
                 if (CHECK_NEIGHBOR(putp, LEFT) &&
-                    CHECK_NEIGHBOR(putp, RIGHT)) {
+                    CHECK_NEIGHBOR(putp, RIGHT) &&
+                    (bp->b[putp->p.x][putp->p.y - 1] ==
+                     bp->b[putp->p.x][putp->p.y + 1])) {
                     tdprintf("hoge");
                     bgputp = putp;
                     
