@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "othello.h"
 
@@ -105,6 +106,7 @@ void finalize(struct board *bp)
 #define COMMAND_HELP       8
 #define COMMAND_BOARD      9
 #define COMMAND_QUIT      10
+#define COMMAND_NULL      11
 
 char *commands[] = {
     "  pass   : pass",
@@ -171,6 +173,9 @@ int getcommand(struct session *sp, struct put *putp)
         
     } else if (strcmp(bufp, "quit") == 0) {
         return COMMAND_QUIT;
+
+    } else if (strlen(bufp) == 0) {
+        return COMMAND_NULL;
         
     } else {
             /*
@@ -217,7 +222,6 @@ int serve_computer(struct session *sp, int player)
     
     printf("Thinking...\n");
     ret = think(sp, putp, sp->turn);
-    sp->is_end = increment_cell_num(sp);
     if (ret != YES) {
         printf("Pass!\n");
         putp->p.x = -1;
@@ -230,6 +234,7 @@ int serve_computer(struct session *sp, int player)
         sp->was_pass = YES;
         return PASS;
     }
+    sp->is_end = increment_cell_num(sp);
     append(&(sp->top), &(putp->main));
     ret = check_puttable(sp, &(sp->bd), putp, sp->turn);
     if (ret == YES) {
@@ -262,7 +267,9 @@ int serve_human(struct session *sp, int player)
     
     switch(getcommand(sp, putp)) {
     case COMMAND_ILLEGAL:
-         break;
+        output(&(sp->bd));
+        printf("Illegal Input.\n");
+        break;
             
     case COMMAND_INPUT:
         putp->color = sp->turn;
@@ -278,7 +285,11 @@ int serve_human(struct session *sp, int player)
             }
             sp->was_pass = NO;
             FLIP_COLOR(sp);
+        } else {
+            output(&(sp->bd));
+            printf("You cannot put there.\n");
         }
+        
         break;
             
     case COMMAND_PASS:
@@ -329,6 +340,11 @@ int serve_human(struct session *sp, int player)
     case COMMAND_QUIT:
         exit(0);
         break;
+        
+    case COMMAND_NULL:
+        output(&(sp->bd));        
+        break;
+        
     default:
     }
    
@@ -671,8 +687,9 @@ void option(int argc, char **argv, struct session *sp)
     }
     
     if ((cfp->opt_l == YES) && (cfp->level == 4) && (cfp->opt_D == NO)) {
-        cfp->depth = 3;
-        printf("Default depth 3 used.\n");
+        cfp->depth = 2;
+        printf("Level %d Default depth %d used.\n",
+               cfp->level, cfp->depth);
     }
     
     dprintf("Specified options summary\n");
@@ -754,7 +771,6 @@ struct session *initialize(int argc, char **argv)
 {
     struct session *sp;
     struct depth *dp;
-    
 
     sp = (struct session *)malloc(sizeof (struct session));
     memset(sp, 0x00, sizeof(struct session));
@@ -771,11 +787,10 @@ struct session *initialize(int argc, char **argv)
     /* initialize this session's board */
     dprintf("board\n");
     INITQ(sp->top);
+    sp->counter  = 0;
     initboard(sp);
     /* initialize player */
     dprintf("player\n");
-    INITQ(sp->player[PLAYER_FIRST].depth);
-    INITQ(sp->player[PLAYER_SECOND].depth);
     switch (sp->cfg.mode) {
     case MODE_HUMAN_HUMAN:
         sp->player[PLAYER_FIRST].type = HUMAN;
@@ -808,12 +823,23 @@ struct session *initialize(int argc, char **argv)
     }
     INITQ(sp->player[PLAYER_FIRST].candidate);
     INITQ(sp->player[PLAYER_SECOND].candidate);
-    sp->counter  = 0;
+    INITQ(sp->player[PLAYER_FIRST].depth);
+    INITQ(sp->player[PLAYER_SECOND].depth);
+    sp->player[PLAYER_FIRST].num_candidate   = 0;
+    sp->player[PLAYER_SECOND].num_candidate  = 0;
     sp->turn     = BLACK;
     sp->was_pass = NO;
     sp->is_end   = NO;
 
     append(&(sessions), &(sp->main));
+    
+    {
+        time_t t;
+        int i;
+        time(&t);
+        srandom((unsigned int)t);
+    }
+    
     return sp;
     
 }

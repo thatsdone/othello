@@ -7,6 +7,12 @@
 
 #include "othello.h"
 
+int orand(int max)
+{
+    return (int) ((double)max * (random() / (double)(RAND_MAX)));
+}
+
+
 
 void append(struct queue *head, struct queue *target)
 {
@@ -51,6 +57,29 @@ void delete(struct queue *target)
     
 }
 
+
+void requeue_all(struct queue *from, struct queue *to)
+{
+    struct queue *qp;
+    
+    qp = GET_TOP_ELEMENT(*from);
+
+    delete(from);
+
+    delete(to);
+    
+    to->next = qp;
+    to->prev = qp->prev;
+    qp->prev->next = to;
+    qp->prev = to;
+    
+    return;
+}
+
+
+
+
+
 int num_put = 0;
 
 struct put *allocput(void)
@@ -87,6 +116,14 @@ void initput(struct put *p)
     return;
 }
 
+struct depth *allocdepth(void)
+{
+    struct depth *dp;
+    
+    dp = (struct depth *)malloc(sizeof(struct depth));
+    return dp;
+}
+
 void initdepth(struct depth *dp, int depth)
 {
     memset(dp, 0x00, sizeof(struct depth));
@@ -97,17 +134,22 @@ void initdepth(struct depth *dp, int depth)
     return;
 }
 
-struct depth *allocdepth(void)
-{
-    struct depth *dp;
-    
-    dp = (struct depth *)malloc(sizeof(struct depth));
-    return dp;
-}
-
 void freedepth(struct depth *dp)
 {
     free((void *)dp);
     return;
 }
+#if 0
+void show_put(struct put *p, int show_gettable) 
+{
+    if (show_getttable) {
+        printf("use (%c%d), gettable=%d\n", (int)p->p.x + 'A',
+               p->p.y + 1, p->gettable);
+    } else {
+        printf("use (%c%d), gettable=%d\n", (int)p->p.x + 'A',
+               p->p.y + 1, p->gettable);
+    }
+    return;
+}
+#endif
 

@@ -76,7 +76,27 @@
 #define Q_TO_DEPTH(queue) (struct depth *)((char *)queue - \
         offsetof(struct depth, q))
 
+#define IS_CORNER(sp, putp) ((putp->p.x == 0) && (putp->p.y == 0)) || \
+                       ((putp->p.x == 0) && (putp->p.y == MAX_Y(sp))) || \
+                       ((putp->p.x == MAX_X(sp)) && (putp->p.y == 0)) || \
+                       ((putp->p.x == MAX_X(sp)) && (putp->p.y == MAX_Y(sp)))
 
+#define IS_BORDER(sp, putp) ((putp->p.x == 0) || (putp->p.x == MAX_X(sp)) || \
+                             (putp->p.y == 0) || (putp->p.y == MAX_Y(sp)))
+
+
+#define IS_CENTER(sp, putp) (putp->p.x >= MIN_PUTTABLE_OFFSET) && \
+                            (putp->p.x <= sp->bd.xsize - \
+                             MIN_PUTTABLE_OFFSET) && \
+                            (putp->p.y >= MIN_PUTTABLE_OFFSET) && \
+                            (putp->p.y <= sp->bd.ysize - \
+                             MIN_PUTTABLE_OFFSET)
+
+#define IS_SUB_BORDER(sp, putp) (putp->p.x == 1) || \
+                                (putp->p.x == MAX_X(p) - 1) || \
+                                (putp->p.y == 1) || \
+                                (putp->p.y == MAX_Y(p) - 1)
+    
 struct board 
 {
     int *b;
@@ -144,6 +164,8 @@ struct put
     struct queue depth;
     struct queue next_depth;
     struct board *bp;
+    struct put *up;
+    struct depth *dp;
 };
 
 struct config
@@ -180,6 +202,7 @@ struct depth
     int depth;
     struct queue candidate;
     struct queue next_depth;
+    int num_cand;
 };
 
 struct player
@@ -188,6 +211,7 @@ struct player
     int level;
     struct queue candidate;
     struct queue depth;
+    int num_candidate;
 };
 
 #define NUM_PLAYER 2
@@ -250,7 +274,7 @@ extern void initput(struct put *);
 extern void init_depth(struct depth *, int);
 extern struct depth *alloc_depth(void);
 extern int num_put;
-
+extern int orand(int);
 /*
  * put.c
  */
