@@ -984,7 +984,7 @@ struct put *simple_strategy(struct session *sp, unsigned int strategy)
 
 int think_level4(struct session *sp, struct put *p, int color)
 {
-    int retcode, pcount, ret, totalcand = 0;
+    int retcode, pcount, ret, totalcand = 0, restcells;
     struct put *putp;
     struct queue *qp;
     int depth, this_turn;
@@ -995,12 +995,16 @@ int think_level4(struct session *sp, struct put *p, int color)
     dprintf("num_put is %d\n", num_put);
     
     retcode = YES;
+    restcells = sp->bd.xsize * sp->bd.ysize -
+        get_occupied_cell_num(sp);
+    dprintf("restcells = %d\n", restcells);
+    
     /*
      * search multiple depths
      */
     this_turn = color;
     depth = 1;
-    while (depth <= sp->cfg.depth) {
+    while ((depth <= sp->cfg.depth) && (depth <= restcells)) {
         tdprintf("think_level4: Checking depth=%d (this_turn=%d)\n",
                depth, this_turn);
         ret = search_next_depth(sp, depth, sp->turn, this_turn);
