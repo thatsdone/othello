@@ -4,7 +4,7 @@
 #ifndef _OTHELLO_H
 #define _OTHELLO_H
 
-#define VERSION "v0.2"
+#define VERSION "v0.5"
 
 #define MAX_BOARDSIZE 16
 #define MIN_BOARDSIZE 4
@@ -42,7 +42,7 @@
 #define GET_TOP_ELEMENT(queue) (queue).next
 #define CANDIDATE_TO_PUT(queue) (struct put *)((char *)queue - \
         offsetof(struct put, candidate))
-#define MAIN_TO_PUT(q) (struct *put)(q)
+#define MAIN_TO_PUT(q) (struct put *)(q)
 
 #define SET_NEIGHBOR(putp, direction) putp->neighbor.i |= (1UL << direction)
 #define CHECK_NEIGHBOR(putp, direction) putp->neighbor.i & (1UL << direction)
@@ -178,6 +178,7 @@ struct session
     int turn;
     int was_pass;
     int is_end;
+    void *buf;
 };
 
 
