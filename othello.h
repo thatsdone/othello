@@ -176,6 +176,8 @@ struct put
     struct board *bp;              /* board with this put */
     struct put *up;                /* upper depth parent candidate */
     struct depth *dp;              /* ptr for struct depth of this level */
+    int black;
+    int white;
 };
 
 struct config
