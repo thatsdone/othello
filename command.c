@@ -55,9 +55,8 @@ int command_pass(struct session *sp, struct put *putp)
             initput(wputp);
             wputp->p.x = x;
             wputp->p.y = y;
-            wputp->color = OPPOSITE_COLOR(sp->turn);
-            ret = check_puttable(sp, &(sp->bd), wputp,
-                                 OPPOSITE_COLOR(sp->turn));
+            wputp->color = sp->turn;
+            ret = check_puttable(sp, &(sp->bd), wputp, sp->turn);
             if (ret == YES) {
                 printf("Illegal PASS!\n");
                 freeput(wputp);
