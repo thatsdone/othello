@@ -100,7 +100,11 @@
                                 (putp->p.x == MAX_X(p) - 1) || \
                                 (putp->p.y == 1) || \
                                 (putp->p.y == MAX_Y(p) - 1)
-    
+
+#define IS_SAME_CELL(putp1, putp2) ((putp1->p.x == putp2->p.x) && \
+                                    (putp1->p.y == putp2->p.y))
+
+
 struct board 
 {
     int *b;
