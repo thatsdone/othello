@@ -246,12 +246,14 @@ int serve_computer(struct session *sp, int player)
     } else {
         printf("serve_computer: internal inconsistency: cannot put.(%c%d)\n",
                putp->p.x + 'A', putp->p.y + 1);
+        print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
         exit(255);
     }
     dprintf("check_puttable returns %d\n", ret);
     ret = process_put(sp, &(sp->bd), putp, sp->turn);
     if (ret < 0) {
         printf("serve_computer: internal inconsistency: proces_put failed.\n");
+        print_candidate_tree(&(sp->player[sp->turn].next_depth), 1);
         exit(255);
     }
     output(&(sp->bd));
@@ -393,7 +395,7 @@ int serve_player(struct session *sp, int player)
         break;
         
     default:
-        printf("Internal consistency!");
+        printf("Internal inconsistency!");
         exit(255);
     }
     return ret;
@@ -428,7 +430,7 @@ void game(struct session *sp)
             break;
             
         default:
-            printf("Internal consistency!\n");
+            printf("Internal inconsistency!\n");
         }
         if (sp->is_end == YES) {
             finalize(&(sp->bd));
