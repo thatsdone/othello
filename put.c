@@ -228,8 +228,49 @@ int vec[NUM_DIRECTION][2] =
     { 1,  1}  /* LOWER_RIGHT */
 };
 
+int unitvec[NUM_DIRECTION][2] =
+{
+    { 0,  1}, /* UP          */
+    { 0, -1}, /* DOWN        */
+    { 1,  0}, /* LEFT        */
+    {-1,  0}, /* RIGHT       */
+    { 1,  1}, /* UPPER_LEFT  */
+    {-1,  1}, /* UPPER_RIGHT */
+    { 1, -1}, /* LOWER_LEFT  */
+    {-1, -1}  /* LOWER_RIGHT */
+};
+
+
+char *vecstr[] =
+{
+    "UP",
+    "DOWN",
+    "LEFT",
+    "RIGHT",
+    "UPPER_LEFT",
+    "UPPER_RIGHT",
+    "LOWER_LEFT",
+    "LOWER_RIGHT"
+};
+
+
+
 int startvec[NUM_DIRECTION][2];
 
+
+#define SET_NEIGHBOR(putp, direction) putp->neighbor.i &= (1UL << direction)
+    
+#define CHECK_NEIGHBOR(putp, direction) putp->neighbor.i & (1UL << direction)
+
+#define IS_PUTTABLE_RANGE(x, y, bp) ((x >= MIN_PUTTABLE_OFFSET) && \
+                                   (y >= MIN_PUTTABLE_OFFSET) && \
+                                   (x < bp->xsize - MIN_PUTTABLE_OFFSET ) && \
+                                   (y < bp->ysize - MIN_PUTTABLE_OFFSET))
+
+#define IS_SCANNABLE_RANGE(x, y, bp) ((x >= 0) && \
+                                   (y >= 0) && \
+                                   (x < bp->xsize) && \
+                                   (y < bp->ysize))
 
 int check_puttable_dir(struct board *bp, struct put *p, int color, int dir)
 {
@@ -249,63 +290,19 @@ int check_puttable_dir(struct board *bp, struct put *p, int color, int dir)
     
     retcode = NO;
     dprintf("check_puttable: checking upper left\n");
-#if 0
-    switch (dir) {
-    case UP:
-        neighbor = p->neighbor.b.up & YES;
-        break;
-    case DOWN:
-        neighbor = p->neighbor.b.down & YES;
-        break;
-    case LEFT:
-        neighbor = p->neighbor.b.left & YES;
-        break;
-    case RIGHT:
-        neighbor = p->neighbor.b.right & YES;
-        break;
-    case UPPER_LEFT:
-        neighbor = p->neighbor.b.upper_left & YES;
-        break;
-    case UPPER_RIGHT:
-        neighbor = p->neighbor.b.upper_right & YES;
-        break;
-    case LOWER_LEFT:
-        neighbor = p->neighbor.b.lower_left & YES;
-        break;
-    case LOWER_RIGHT:
-        neighbor = p->neighbor.b.lower_right & YES;
-    default:
-        printf("check_puttable_dir: Internal inconsistency!\n");
-        exit(255);
-        
-    }
-#endif
 
-#define SET_NEIGHBOR(putp, direction) putp->neighbor.i &= (1UL << direction)
-    
-#define CHECK_NEIGHBOR(putp, direction) putp->neighbor.i & (1UL << direction)
-
-#define IS_PUTTABLE_RANGE(x, y, bp) ((x >= MIN_PUTTABLE_OFFSET) && \
-                                   (y >= MIN_PUTTABLE_OFFSET) && \
-                                   (x < bp->xsize - MIN_PUTTABLE_OFFSET ) && \
-                                   (y < bp->ysize - MIN_PUTTABLE_OFFSET))
-    ix =  startvec[dir][X];
+    ix = startvec[dir][X];
     iy = startvec[dir][Y];
     if (CHECK_NEIGHBOR(p, dir) &&
         IS_PUTTABLE_RANGE(p->p.x, p->p.y, bp) &&
         (bp->b[px + dx][py + dx] == OPPOSITE_COLOR(p->color))) {
         getwk = 1;
-        for (x = px - PUT_CHECK_OFFSET, y = py - PUT_CHECK_OFFSET;
-             (x >= MIN_X && y >= MIN_Y && x <= MAX_Y && y <= MAX_Y);
+        for (x = px + ix, y = py + iy; IS_SCANNABLE_RANGE(x, y, bp);
              x += dx, y += dy) {
             dprintf("loop: x = %d, y = %d, color = %d\n", x, y, bp->b[x][y]);
-            if (bp->b[x][y] == color) {
+            if (bp->b[x][y] == p->color) {
                 dprintf("found puttable line: upper left\n");
-#if 0                
-                p->canget.b.upper_left = YES;
-#else
                 SET_NEIGHBOR(p, dir);
-#endif
                 retcode = YES;
                 break;
             } else if (bp->b[x][y] == EMPTY) {
