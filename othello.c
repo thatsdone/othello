@@ -15,7 +15,7 @@ struct queue top;
 struct board bd;
 
 
-int getpoint(char *buf, struct point *p)
+int getpoint(struct session *sp, char *buf, struct point *p)
 {
     int len;
     
@@ -29,18 +29,19 @@ int getpoint(char *buf, struct point *p)
     dprintf("y value length/value is %d/%d\n", len, p->y);
     dprintf("Input is x=%d/y=%d\n", p->x, p->y);
     
-    if ((p->x >= BOARDSIZE) || (p->y >= BOARDSIZE) || (p->y < 0)) {
+    if ((p->x >= sp->bd.xsize) || (p->y >= sp->bd.ysize) ||
+        (p->x < 0) || (p->y < 0)) {
         return NO;
     }
     return YES;
 }
 
 static int counter = 0;
-int increment_cell_num(void)
+int increment_cell_num(struct session *sp)
 {
     counter++;
 
-    if (counter == (BOARDSIZE * BOARDSIZE)) {
+    if (counter == (sp->bd.xsize * sp->bd.ysize)) {
         return YES;
     } else {
         return NO;
@@ -60,8 +61,8 @@ void calculate_score(struct board *bp, int *black, int *white)
     *black = 0;
     *white = 0;
 
-    for (x = 0; x < BOARDSIZE; x++) {
-        for (y = 0; y < BOARDSIZE; y++) {
+    for (x = 0; x < bp->xsize; x++) {
+        for (y = 0; y < bp->ysize; y++) {
             switch (CELL(*bp, x, y)) {
             case BLACK:
                 (*black)++;
@@ -107,6 +108,7 @@ void finalize(struct board *bp)
 #define COMMAND_STATUS     7
 #define COMMAND_HELP       8
 #define COMMAND_BOARD      9
+#define COMMAND_QUIT      10
 
 char *commands[] = {
     "  pass   : pass",
@@ -118,6 +120,7 @@ char *commands[] = {
     "  status : show system status",
     "  help   : show this message",
     "  board  : show current board",
+    "  quite  : quit",    
     "*"
 };
 
@@ -161,11 +164,17 @@ int getcommand(struct session *sp, struct put *putp)
     } else if (strcmp(bufp, "board") == 0) {
         return COMMAND_BOARD;
         
+    } else if (strcmp(bufp, "status") == 0) {
+        return COMMAND_STATUS;
+        
+    } else if (strcmp(bufp, "quit") == 0) {
+        return COMMAND_QUIT;
+        
     } else {
             /*
              * normal input
              */
-        if(getpoint(bufp, &putp->p) != YES) {
+        if(getpoint(sp, bufp, &putp->p) != YES) {
             return COMMAND_ILLEGAL;
         }
 
@@ -245,7 +254,7 @@ int serve_computer(struct session *sp, int player)
     
     printf("Thinking...\n");
     ret = think(sp, putp, sp->turn);
-    sp->is_end = increment_cell_num();
+    sp->is_end = increment_cell_num(sp);
     if (ret != YES) {
         printf("Pass!\n");
         putp->p.x = -1;
@@ -277,6 +286,19 @@ int serve_computer(struct session *sp, int player)
     return SERVED;
 }
 
+#define player_type(type) ((type == HUMAN) ? "HUMAN" : "COMPUTER")
+
+int command_status(struct session *sp)
+{
+    printf("boardsize: x=%d, y=%d)\n", sp->bd.xsize, sp->bd.ysize);
+    printf("player0(BLACK)=%s(level=%d), player1(WHITE)=%s(level=%d)",
+           player_type(sp->player[PLAYER_FIRST].type),
+           sp->player[PLAYER_FIRST].level,
+           player_type(sp->player[PLAYER_SECOND].type),
+           sp->player[PLAYER_SECOND].level);
+    printf("\n");
+    
+}
 
 int command_pass(struct session *sp, struct put *putp)
 {
@@ -341,7 +363,7 @@ int serve_human(struct session *sp, int player)
             CELL(sp->bd, putp->p.x, putp->p.y) = putp->color;
             append(&(sp->top), &(putp->main));
             process_put(sp, putp, putp->color); 
-            sp->is_end = increment_cell_num();
+            sp->is_end = increment_cell_num(sp);
             if (sp->is_end == YES) {
                 finalize(&(sp->bd));
             }
@@ -377,6 +399,7 @@ int serve_human(struct session *sp, int player)
         break;
             
     case COMMAND_STATUS:
+        command_status(sp);
         break;
         
     case COMMAND_HELP:
@@ -393,6 +416,9 @@ int serve_human(struct session *sp, int player)
         output(&(sp->bd));
         break;
         
+    case COMMAND_QUIT:
+        exit(0);
+        break;
     default:
     }
    
@@ -494,7 +520,7 @@ void option_new(int argc, char **argv, struct session *sp)
 
     sp->player[0].level = 3;
     sp->player[1].level = 3;    
-    
+
     while (1) {
         c = getopt(argc, argv, "b:h:p:l:m:f:d:0:1:v3");
         switch (c) {
@@ -738,7 +764,7 @@ int initboard_new(struct session *sp)
     printf("boardsize = %d\n", boardsize);
     
     CELL(sp->bd, (boardsize / 2 - 1), (boardsize / 2)) = BLACK;
-    increment_cell_num();
+    increment_cell_num(sp);
     putp = allocput();
     putp->color = BLACK;
     putp->p.x = boardsize / 2 - 1;
@@ -746,7 +772,7 @@ int initboard_new(struct session *sp)
     append(&(sp->top), &(putp->main));
     
     CELL(sp->bd, (boardsize / 2 - 1), (boardsize / 2 - 1)) = WHITE;
-    increment_cell_num();
+    increment_cell_num(sp);
     putp = allocput();
     putp->color = WHITE;
     putp->p.x = boardsize / 2 - 1;
@@ -754,7 +780,7 @@ int initboard_new(struct session *sp)
     append(&(sp->top), &(putp->main));
     
     CELL(sp->bd, boardsize / 2 , boardsize / 2 - 1) = BLACK;
-    increment_cell_num();
+    increment_cell_num(sp);
     putp = allocput();
     putp->color = BLACK;
     putp->p.x = boardsize / 2;
@@ -762,7 +788,7 @@ int initboard_new(struct session *sp)
     append(&(sp->top), &(putp->main));
     
     CELL(sp->bd, boardsize / 2, boardsize / 2) = WHITE;
-    increment_cell_num();
+    increment_cell_num(sp);
     putp = allocput();
     putp->color = WHITE;
     putp->p.x = boardsize / 2;

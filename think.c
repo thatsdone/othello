@@ -29,8 +29,8 @@ int simple_search_candidate(struct session *sp, int color, struct queue *head)
     
     pcount = 0;
     putp = allocput();
-    for (y = 0; y < BOARDSIZE; y++) {
-        for (x = 0; x < BOARDSIZE; x++) {
+    for (y = 0; y < sp->bd.xsize; y++) {
+        for (x = 0; x < sp->bd.ysize; x++) {
             initput(putp);
             putp->color = color;
             putp->p.y = y;
@@ -132,15 +132,15 @@ int choose_corner_border(struct session *sp,
              *  3) maximun cells
              */
         if (((putp->p.x == 0) && (putp->p.y == 0)) ||
-            ((putp->p.x == 0) && (putp->p.y == MAX_Y)) ||
-            ((putp->p.x == MAX_X) && (putp->p.y == 0)) ||
-            ((putp->p.x == MAX_X) && (putp->p.y == MAX_Y))) {
+            ((putp->p.x == 0) && (putp->p.y == MAX_Y(sp))) ||
+            ((putp->p.x == MAX_X(sp)) && (putp->p.y == 0)) ||
+            ((putp->p.x == MAX_X(sp)) && (putp->p.y == MAX_Y(sp)))) {
                 /* corner */
             delete(&(putp->candidate));
             append(cornerp, &(putp->candidate));
 
-        } else  if ((putp->p.x == 0) || (putp->p.x == MAX_X) ||
-                    (putp->p.y == 0) || (putp->p.y == MAX_Y)) {
+        } else  if ((putp->p.x == 0) || (putp->p.x == MAX_X(sp)) ||
+                    (putp->p.y == 0) || (putp->p.y == MAX_Y(sp))) {
                 /* border */
             delete(&(putp->candidate));
             append(borderp, &(putp->candidate));
@@ -259,8 +259,8 @@ int think_level0(struct session *sp, struct put *p, int color)
     struct board *bp = &(sp->bd);
     
     putp = allocput();
-    for (y = 0; y < BOARDSIZE; y++) {
-        for (x = 0; x < BOARDSIZE; x++) {
+    for (y = 0; y < sp->bd.xsize; y++) {
+        for (x = 0; x < sp->bd.ysize; x++) {
             initput(putp);
             putp->color = color;
             putp->p.y = y;
@@ -433,7 +433,7 @@ int think_level3(struct session *sp, struct put *p, int color)
             putp = CANDIDATE_TO_PUT(qp);
             dprintf("border check level=%d, %08x, (%d,%d)\n",
                    level, putp->neighbor.i, putp->p.x, putp->p.y);
-            if ((putp->p.x == 0) || (putp->p.x == MAX_X)) {
+            if ((putp->p.x == 0) || (putp->p.x == MAX_X(sp))) {
                 dprintf("border check both sides x=%d\n", putp->p.x);
                 if (CHECK_NEIGHBOR(putp, UP) &&
                     CHECK_NEIGHBOR(putp, DOWN) &&
@@ -462,7 +462,7 @@ int think_level3(struct session *sp, struct put *p, int color)
                     bgputp = putp;
                 }
             }
-            if ((putp->p.y == 0) || (putp->p.y == MAX_Y)) {
+            if ((putp->p.y == 0) || (putp->p.y == MAX_Y(sp))) {
                 dprintf("hara\n");
                     
                 if (CHECK_NEIGHBOR(putp, LEFT) &&

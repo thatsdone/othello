@@ -109,26 +109,26 @@ int check_puttable_dir(struct session *sp, struct put *p, int color, int dir)
         range_check = (py >= MIN_PUTTABLE_OFFSET);
         break;
     case DOWN:
-        range_check = (py <= MAX_Y - MIN_PUTTABLE_OFFSET);
+        range_check = (py <= MAX_Y(sp) - MIN_PUTTABLE_OFFSET);
         break;
     case LEFT:
         range_check = (py >= MIN_PUTTABLE_OFFSET);
         break;
     case RIGHT:
-        range_check = (px <= MAX_X - MIN_PUTTABLE_OFFSET);
+        range_check = (px <= MAX_X(sp) - MIN_PUTTABLE_OFFSET);
         break;
     case UPPER_LEFT:
         range_check = (px >= MIN_PUTTABLE_OFFSET) && (py >= MIN_PUTTABLE_OFFSET);
         break;
     case UPPER_RIGHT:
-        range_check = (px <= MAX_X - MIN_PUTTABLE_OFFSET) && (py >= MIN_PUTTABLE_OFFSET);
+        range_check = (px <= MAX_X(sp) - MIN_PUTTABLE_OFFSET) && (py >= MIN_PUTTABLE_OFFSET);
         break;        
     case LOWER_LEFT:
-        range_check = (px >= MIN_PUTTABLE_OFFSET) && (py <= MAX_Y - MIN_PUTTABLE_OFFSET);
+        range_check = (px >= MIN_PUTTABLE_OFFSET) && (py <= MAX_Y(sp) - MIN_PUTTABLE_OFFSET);
         break;
  
     case LOWER_RIGHT:
-        range_check = (px <= MAX_X - MIN_PUTTABLE_OFFSET) && (py <= MAX_Y - MIN_PUTTABLE_OFFSET);
+        range_check = (px <= MAX_X(sp) - MIN_PUTTABLE_OFFSET) && (py <= MAX_Y(sp) - MIN_PUTTABLE_OFFSET);
         break;
     }
     dprintf("dir is %d, range_check is %d\n", dir, range_check);
@@ -191,7 +191,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * right
      */
-    if ((x < MAX_X) && !IS_EMPTY_CELL(sp->bd, x + 1, y)) {
+    if ((x < MAX_X(sp)) && !IS_EMPTY_CELL(sp->bd, x + 1, y)) {
         dprintf("right is not empty\n");
         p->neighbor.b.right = YES;
         ret = YES;
@@ -207,7 +207,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * down
      */
-    if ((y < MAX_Y) && !IS_EMPTY_CELL(sp->bd, x, y + 1)) {
+    if ((y < MAX_Y(sp)) && !IS_EMPTY_CELL(sp->bd, x, y + 1)) {
         dprintf("down is not empty\n");
         p->neighbor.b.down = YES;
         ret = YES;        
@@ -223,7 +223,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * upper right
      */
-    if ((x < MAX_X) && (y > 0) && !IS_EMPTY_CELL(sp->bd, x + 1, y - 1)) {
+    if ((x < MAX_X(sp)) && (y > 0) && !IS_EMPTY_CELL(sp->bd, x + 1, y - 1)) {
         dprintf("upper right is not empty\n");
         p->neighbor.b.upper_right = YES;
         ret = YES;        
@@ -232,7 +232,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * lower left
      */
-    if ((x > 0) && (y < MAX_Y) &&
+    if ((x > 0) && (y < MAX_Y(sp)) &&
         !IS_EMPTY_CELL(sp->bd, x - 1, y + 1)) {
         dprintf("lower left is not empty\n");
         p->neighbor.b.lower_left = YES;        
@@ -241,7 +241,7 @@ int check_empty(struct session *sp, struct put *p, int color)
     /*
      * lower right
      */
-    if ((x < MAX_X) && (y < MAX_Y) && !IS_EMPTY_CELL(sp->bd,x + 1, y + 1)) {
+    if ((x < MAX_X(sp)) && (y < MAX_Y(sp)) && !IS_EMPTY_CELL(sp->bd,x + 1, y + 1)) {
         dprintf("lower right is not empty\n");
         p->neighbor.b.lower_right = YES;
         ret = YES;        
@@ -274,7 +274,7 @@ int process_put(struct session *sp, struct put *p, int color)
      * down
      */
     if (CHECK_CANGET(p, DOWN)) {
-        for (y = p->p.y + 1; y < MAX_Y; y++) {
+        for (y = p->p.y + 1; y < MAX_Y(sp); y++) {
             if (CELL(*bp, p->p.x, y) == OPPOSITE_COLOR(color)) {
                 CELL(*bp, p->p.x, y) = color;
             } else {
@@ -299,7 +299,7 @@ int process_put(struct session *sp, struct put *p, int color)
      * right
      */
     if (CHECK_CANGET(p, RIGHT)) {
-        for (x = p->p.x + 1; x < MAX_X; x++) {
+        for (x = p->p.x + 1; x < MAX_X(sp); x++) {
             if (CELL(*bp, x, p->p.y) == OPPOSITE_COLOR(color)) {
                 CELL(*bp, x, p->p.y) = color;
             } else {
@@ -325,7 +325,7 @@ int process_put(struct session *sp, struct put *p, int color)
      */
     if (CHECK_CANGET(p, UPPER_RIGHT)) {
         for (x = p->p.x + 1, y = p->p.y - 1;
-             (x < MAX_X && y > MIN_Y); x++, y--) {
+             (x < MAX_X(sp) && y > MIN_Y); x++, y--) {
             if (CELL(*bp, x, y) == OPPOSITE_COLOR(color)) {
                 CELL(*bp, x, y) = color;
             } else {
@@ -338,7 +338,7 @@ int process_put(struct session *sp, struct put *p, int color)
      */
     if (CHECK_CANGET(p, LOWER_LEFT)) {
         for (x = p->p.x - 1, y = p->p.y + 1;
-             (x > MIN_X && y < MAX_Y); x--, y++) {
+             (x > MIN_X && y < MAX_Y(sp)); x--, y++) {
             if (CELL(*bp, x, y) == OPPOSITE_COLOR(color)) {
                 CELL(*bp, x, y) = color;
             } else {
@@ -352,7 +352,7 @@ int process_put(struct session *sp, struct put *p, int color)
      */
     if (CHECK_CANGET(p, LOWER_RIGHT)) {
         for (x = p->p.x + 1, y = p->p.y + 1;
-             (x < MAX_X && y < MAX_Y); x++, y++) {
+             (x < MAX_X(sp) && y < MAX_Y(sp)); x++, y++) {
             if (CELL(*bp, x, y) == OPPOSITE_COLOR(color)) {
                 CELL(*bp, x, y) = color;
             } else {

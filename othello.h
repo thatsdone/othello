@@ -11,8 +11,8 @@
 #define BOARDSIZE 8
 #define MIN_X 0
 #define MIN_Y 0
-#define MAX_X (BOARDSIZE - 1)
-#define MAX_Y (BOARDSIZE - 1)
+#define MAX_X(sp) ((sp)->bd.xsize - 1)
+#define MAX_Y(sp) ((sp)->bd.ysize - 1)
 #define MIN_PUTTABLE_OFFSET 2
 #define PUT_CHECK_OFFSET 2
 
