@@ -249,6 +249,7 @@ extern void freeput(struct put *);
 extern void initput(struct put *);
 extern void init_depth(struct depth *, int);
 extern struct depth *alloc_depth(void);
+extern int num_put;
 
 /*
  * put.c

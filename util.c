@@ -51,6 +51,7 @@ void delete(struct queue *target)
     
 }
 
+int num_put = 0;
 
 struct put *allocput(void)
 {
@@ -63,6 +64,7 @@ struct put *allocput(void)
         INITQ(p->candidate);
         INITQ(p->next_depth);
     }
+    num_put++;
     return p;
 }
 
@@ -70,6 +72,7 @@ struct put *allocput(void)
 void freeput(struct put *p)
 {
     free((void *)p);
+    num_put--;
 }
 
 void initput(struct put *p)
