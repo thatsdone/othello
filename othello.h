@@ -144,6 +144,11 @@ extern int check_puttable(struct board *, struct put *, int);
  * think.c
  */
 extern int think(struct board *, struct put *, int);
+extern int think_level0(struct board *, struct put *, int);
+extern int think_level1(struct board *, struct put *, int);
+extern int think_level2(struct board *, struct put *, int);
+extern int think_level3(struct board *, struct put *, int);
+extern int think_level4(struct board *, struct put *, int);
 
 /*
  * othello.c
