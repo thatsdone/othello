@@ -29,7 +29,7 @@ int check_empty(struct board *bp, struct put *p, int color)
     /*
      * right
      */
-    if ((x <= BOARDSIZE - 1) &&
+    if ((x < MAX_X) &&
         (bp->b[x + 1][y] != EMPTY)) {
         dprintf("right is not empty\n");
         p->neighbor.b.right = YES;
@@ -46,7 +46,7 @@ int check_empty(struct board *bp, struct put *p, int color)
     /*
      * down
      */
-    if ((y <= BOARDSIZE - 1) &&
+    if ((y < MAX_Y) &&
                (bp->b[x][y + 1] != EMPTY)) {
         dprintf("down is not empty\n");
         p->neighbor.b.down = YES;
@@ -64,7 +64,7 @@ int check_empty(struct board *bp, struct put *p, int color)
     /*
      * upper right
      */
-    if ((x <= BOARDSIZE - 1) && (y > 0) &&
+    if ((x < MAX_X) && (y > 0) &&
         (bp->b[x + 1][y - 1] != EMPTY)) {
         dprintf("upper right is not empty\n");
         p->neighbor.b.upper_right = YES;
@@ -74,7 +74,7 @@ int check_empty(struct board *bp, struct put *p, int color)
     /*
      * lower left
      */
-    if ((x > 0) && (y <= BOARDSIZE - 1) &&
+    if ((x > 0) && (y < MAX_Y) &&
         (bp->b[x - 1][y + 1] != EMPTY)) {
         dprintf("lower left is not empty\n");
         p->neighbor.b.lower_left = YES;        
@@ -83,13 +83,14 @@ int check_empty(struct board *bp, struct put *p, int color)
     /*
      * lower right
      */
-    if ((x <= BOARDSIZE - 1) && (x <= BOARDSIZE - 1) &&
+    if ((x < MAX_X) && (y < MAX_Y) &&
         (bp->b[x + 1][y + 1] != EMPTY)) {
         dprintf("lower right is not empty\n");
         p->neighbor.b.lower_right = YES;
         ret = YES;        
     }
-
+    dprintf("(%d,%d) neighbor = %08x\n", x, y, p->neighbor.i);
+    
     return ret;
         
 }
@@ -257,20 +258,6 @@ char *vecstr[] =
 
 int startvec[NUM_DIRECTION][2];
 
-
-#define SET_NEIGHBOR(putp, direction) putp->neighbor.i &= (1UL << direction)
-    
-#define CHECK_NEIGHBOR(putp, direction) putp->neighbor.i & (1UL << direction)
-
-#define IS_PUTTABLE_RANGE(x, y, bp) ((x >= MIN_PUTTABLE_OFFSET) && \
-                                   (y >= MIN_PUTTABLE_OFFSET) && \
-                                   (x < bp->xsize - MIN_PUTTABLE_OFFSET ) && \
-                                   (y < bp->ysize - MIN_PUTTABLE_OFFSET))
-
-#define IS_SCANNABLE_RANGE(x, y, bp) ((x >= 0) && \
-                                   (y >= 0) && \
-                                   (x < bp->xsize) && \
-                                   (y < bp->ysize))
 
 int check_puttable_dir(struct board *bp, struct put *p, int color, int dir)
 {

@@ -34,7 +34,7 @@
 #define OPPOSITE_COLOR(color) ((color == BLACK) ? WHITE : BLACK)
 
 #define INITQ(q) (q.next = &q, q.prev = &q)
-#define IS_EMPTYQ(q) (q.next == &q)
+#define IS_EMPTYQ(q) ((q).next == &q)
 #define GET_TOP_ELEMENT(queue) (queue).next
 #define CANDIDATE_TO_PUT(queue) (struct put *)((char *)queue - \
         offsetof(struct put, candidate));
@@ -162,6 +162,8 @@ extern void initboard_format(void);
  * util.c
  */
 extern void append(struct queue *, struct queue *);
+void push(struct queue *, struct queue *);
+void delete(struct queue *);
 extern struct put *allocput(void);
 void freeput(struct put *);
 /*
