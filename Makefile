@@ -18,5 +18,6 @@ $(OUT):
 	gcc -o $(OUT) $(OBJS)
 
 clean:
-	rm -f othello.exe *.o *~ *stackdump
+	rm -f $(OUT) $(OBJS) *~ *stackdump
+
 

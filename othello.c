@@ -140,7 +140,8 @@ int interactive(struct board *b)
 
     color = BLACK;
 
-    if ((mode == MODE_HUMAN_COMPUTER) && (serve_first == YES)) {
+    if (((mode == MODE_HUMAN_COMPUTER) && (serve_first == YES)) ||
+         (mode == MODE_COMPUTER_COMPUTER)) {
         ret = serve_computer_turn(&bd, color);
         if (ret != PASS) {
             increment_cell_num();
@@ -157,6 +158,7 @@ int interactive(struct board *b)
         if (putp == NULL){
             putp = allocput();
         }
+        
         /* display prompt */
         if (color == BLACK) {
             printf("Command(BLACK): ");
@@ -240,7 +242,8 @@ int interactive(struct board *b)
             if (is_end == YES) {
                 finalize();
             }
-            if (mode == MODE_HUMAN_COMPUTER){
+            if ((mode == MODE_HUMAN_COMPUTER) ||
+                (mode == MODE_COMPUTER_COMPUTER)) {
                 ret = serve_computer_turn(&bd, color);
                 /* flip color */
                 output(&bd);
@@ -332,11 +335,11 @@ char *usage[] = {
     "  -h <hostname>    hostname\n",
     "  -p <port>        port number\n",
     "  -l <level>       level\n",
-    "  -m <mode>        mode: human/human(0, currently default)\n",
-    "                         human/computer(1),\n",
+    "  -m <mode>        mode: human/human(0)\n",
+    "                         human/computer(1) : default,\n",
     "                         computer/computer(2),\n",
     "                         network(3)\n",
-    "  -f <player>      first serve player (default: human)\n",
+    "  -f <player>      first serve player: 0=human(default)/1=computer\n",
     "  -3               3D othello\n",
     "  -d <debug level> debug level\n",
 };
@@ -353,9 +356,9 @@ int opt_3;
 
 char remote_host[256];
 unsigned short remote_port = 9360;
-int level = 0;
+int level = 2;
 int boardsize = BOARDSIZE;
-int mode = MODE_HUMAN_HUMAN;
+int mode = MODE_HUMAN_COMPUTER;
 int serve_first = NO;
 int debug_level = 0;
 
@@ -374,7 +377,7 @@ int option(int argc, char **argv)
     opt_3 = NO;
     
     while (1) {
-        c = getopt(argc, argv, "b:h:p:l:m:f:d:3");
+        c = getopt(argc, argv, "b:h:p:l:m:f:d:v3");
         switch (c) {
         case 'b':
             dprintf("getopt returns %c\n", c);
@@ -516,6 +519,13 @@ int option(int argc, char **argv)
             exit(255);
             break;
             
+        case 'v':
+            for (i = 0; i < 11; i++) {
+                printf(usage[i]);
+            }
+            exit(255);
+            break;
+            
         case '?':
             printf("unknown parameter\n");
             for (i = 0; i < 11; i++) {
@@ -524,6 +534,7 @@ int option(int argc, char **argv)
             
             exit(255);
             break;
+            
         case -1:
             goto exit;
         }
@@ -547,11 +558,8 @@ int option(int argc, char **argv)
 
 void initialize(void)
 {
-    top.next = &top;
-    top.prev = &top;
-
-    candidate.next = &candidate;
-    candidate.prev = &candidate;    
+    INITQ(top);
+    INITQ(candidate);
 }
 
 
@@ -573,3 +581,5 @@ int main (int argc, char **argv)
 }
 
     
+
+

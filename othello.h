@@ -4,7 +4,7 @@
 #ifndef _OTHELLO_H
 #define _OTHELLO_H
 
-#define VERSION "v0.0"
+#define VERSION "v0.2"
 
 #define MAX_BOARDSIZE 8
 #define MIN_BOARDSIZE 4
@@ -26,12 +26,21 @@
 #define SERVED 1
 #define PASS   2
 
-#define OPPOSITE_COLOR(color) ((color == BLACK) ? WHITE : BLACK)
-
 #define MODE_HUMAN_HUMAN       0
 #define MODE_HUMAN_COMPUTER    1
 #define MODE_COMPUTER_COMPUTER 2
 #define MODE_NETWORK           3
+
+#define OPPOSITE_COLOR(color) ((color == BLACK) ? WHITE : BLACK)
+
+#define INITQ(q) (q.next = &q, q.prev = &q)
+#define IS_EMPTYQ(q) (q.next == &q)
+#define GET_TOP_ELEMENT(queue) (queue).next
+#define CANDIDATE_TO_PUT(queue) (struct put *)((char *)queue - \
+        offsetof(struct put, candidate));
+
+
+
 
 struct board 
 {
@@ -58,7 +67,6 @@ struct point
 
 #define NUM_DIRECTION 8
 
-
 struct queue 
 {
     struct queue *next;
@@ -83,16 +91,9 @@ struct put
 {
     struct queue main;
     struct queue candidate;
-    
-    
     int color;
     struct point p;
-/*    char dir[3][3]; */
-/*    int puttable[NUM_DIRECTION]; */
-#if 0
-    struct direction neighbor;
-    struct direction canget;
-#else
+    
     union {
         struct direction b;
         int i;
@@ -101,27 +102,21 @@ struct put
         struct direction b;
         int i;
     } canget;
-#endif
     int gettable;
-    
-#if 0   
-    int up;
-    int down;
-    int left;
-    int right;
-    int upper_left;
-    int upper_right;
-    int lower_left;
-    int lower_right;
-#endif
 
 };
 
+struct session
+{
+    struct queue main;         /* struct session main chain */
+    struct board *bp;          /* */
+};
 
-struct scenario 
+struct scenario
 {
     struct queue main;         /* struct scenario chain */
     struct queue candidate;    /* struct put chain */
+
 };
 
 
@@ -183,10 +178,8 @@ extern int serve_first;
 extern int debug_level;
 extern struct queue candidate;
 
-#if 0
-#define offsetof(s, m)  (size_t)(&(((s *)0)->m))
-#endif
-
 #endif /* _OTHELLO_H */
+
+
 
 

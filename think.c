@@ -45,10 +45,6 @@ int think_level0(struct board *bp, struct put *p, int color)
  *   choose the cell by which the number of cells I can get
  *   will be maximized.
  */
-#define GET_TOP_ELEMENT(queue) (queue).next
-#define CANDIDATE_TO_PUT(queue) (struct put *)((char *)queue - \
-        offsetof(struct put, candidate));
-
 int simple_search_candidate(struct board *bp, int color, struct queue *head)
 {
     int x, y, pcount;
@@ -155,7 +151,6 @@ int think_level2(struct board *bp, struct put *p, int color)
         return NO;
     }
 
-#define INITQ(q) (q.next = &q, q.prev = &q)
     INITQ(corner);
     INITQ(border);
     
@@ -190,7 +185,6 @@ int think_level2(struct board *bp, struct put *p, int color)
         qp = qpsave;
     }
     
-#define IS_EMPTYQ(q) (q.next == &q)
     dprintf("corner\n");
     cgputp = NULL;
     if (!IS_EMPTYQ(corner)) {
