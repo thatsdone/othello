@@ -4,7 +4,7 @@
 #ifndef _OTHELLO_H
 #define _OTHELLO_H
 
-#define VERSION "v0.5"
+#define VERSION "v0.6"
 
 #define MAX_BOARDSIZE 16
 #define MIN_BOARDSIZE 4
