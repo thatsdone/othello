@@ -60,18 +60,33 @@ void delete(struct queue *target)
 
 void requeue_all(struct queue *from, struct queue *to)
 {
-    struct queue *qp;
-    
-    qp = GET_TOP_ELEMENT(*from);
+    struct queue *topqp, *lastqp;
 
-    delete(from);
 
-    delete(to);
+    if (!IS_EMPTYQ(*to)) {
+        struct put *putp;
+        printf("requeue_all: queue 'to' is not EMPTY!!!\n");
+        putp = DEPTH_TO_PUT(GET_TOP_ELEMENT(*to));
+        printf("requeue_all: (%c%d) color=%d\n", (int)putp->p.x + 'A',
+               putp->p.y + 1, putp->color);
+            
+    }
     
-    to->next = qp;
-    to->prev = qp->prev;
-    qp->prev->next = to;
-    qp->prev = to;
+    topqp  = GET_TOP_ELEMENT(*from);
+    lastqp = GET_LAST_ELEMENT(*from);
+    
+    
+    to->next = topqp;
+    to->prev = lastqp;
+    topqp->prev = to;
+    lastqp->next = to;
+    
+    dprintf("requeue_all: to->next is %p\n", topqp);
+    dprintf("requeue_all: to->prev is %p\n", lastqp);
+    dprintf("requeue_all: topqp->prev is %p\n", to);
+    dprintf("requeue_all: lastqp->next is %p\n", to);
+    
+    INITQ(*from);
     
     return;
 }
