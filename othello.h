@@ -310,6 +310,7 @@ extern int think_level1(struct session *, struct put *, int);
 extern int think_level2(struct session *, struct put *, int);
 extern int think_level3(struct session *, struct put *, int);
 extern int think_level4(struct session *, struct put *, int);
+extern void print_candidate_tree(struct queue *, int);
 
 /*
  * othello.c
