@@ -34,7 +34,7 @@ int unitvec[NUM_DIRECTION][2] =
     {-1,  1}, /* UPPER_RIGHT */
     { 1, -1}, /* LOWER_LEFT  */
     {-1, -1}  /* LOWER_RIGHT */
-};
+s};
 
 char *vecstr[] =
 {
@@ -67,6 +67,43 @@ int check_puttable(struct session *sp, struct put *p, int color)
     return ret;
 }
 
+int is_puttable_range(struct session *sp, int px, int py, int dir) 
+{
+    int range_check;
+    
+    switch (dir) {
+    case UP:
+        range_check = (py >= MIN_PUTTABLE_OFFSET);
+        break;
+    case DOWN:
+        range_check = (py <= MAX_Y(sp) - MIN_PUTTABLE_OFFSET);
+        break;
+    case LEFT:
+        range_check = (px >= MIN_PUTTABLE_OFFSET);
+        break;
+    case RIGHT:
+        range_check = (px <= MAX_X(sp) - MIN_PUTTABLE_OFFSET);
+        break;
+    case UPPER_LEFT:
+        range_check = (px >= MIN_PUTTABLE_OFFSET) && (py >= MIN_PUTTABLE_OFFSET);
+        break;
+    case UPPER_RIGHT:
+        range_check = (px <= MAX_X(sp) - MIN_PUTTABLE_OFFSET) && (py >= MIN_PUTTABLE_OFFSET);
+        break;        
+    case LOWER_LEFT:
+        range_check = (px >= MIN_PUTTABLE_OFFSET) && (py <= MAX_Y(sp) - MIN_PUTTABLE_OFFSET);
+        break;
+ 
+    case LOWER_RIGHT:
+        range_check = (px <= MAX_X(sp) - MIN_PUTTABLE_OFFSET) && (py <= MAX_Y(sp) - MIN_PUTTABLE_OFFSET);
+        break;
+    }
+    dprintf("dir is %d, range_check is %d\n", dir, range_check);
+    
+    return range_check;
+}
+
+
 int check_puttable_dir(struct session *sp, struct put *p, int color, int dir)
 {
     int ret, retcode, neighbor;
@@ -94,57 +131,16 @@ int check_puttable_dir(struct session *sp, struct put *p, int color, int dir)
     
     ix = startvec[dir][X];
     iy = startvec[dir][Y];
-#if 0
-    if ((p->p.x == 6) && (p->p.y == 2)) {
-        
-    printf("check_neighbor %d\n", CHECK_NEIGHBOR(p, dir));
-    printf("is_puttalble_range %d\n", IS_PUTTABLE_RANGE(p->p.x, p->p.y, bp));
-    printf("looking cell is (x,y)=(%d,%d) color is %d, mine (%d))\n",
-           px + ix, py + iy, CELL(*bp, px + ix, py + iy), color);
-    }
-#endif
-
-    switch (dir) {
-    case UP:
-        range_check = (py >= MIN_PUTTABLE_OFFSET);
-        break;
-    case DOWN:
-        range_check = (py <= MAX_Y(sp) - MIN_PUTTABLE_OFFSET);
-        break;
-    case LEFT:
-        range_check = (py >= MIN_PUTTABLE_OFFSET);
-        break;
-    case RIGHT:
-        range_check = (px <= MAX_X(sp) - MIN_PUTTABLE_OFFSET);
-        break;
-    case UPPER_LEFT:
-        range_check = (px >= MIN_PUTTABLE_OFFSET) && (py >= MIN_PUTTABLE_OFFSET);
-        break;
-    case UPPER_RIGHT:
-        range_check = (px <= MAX_X(sp) - MIN_PUTTABLE_OFFSET) && (py >= MIN_PUTTABLE_OFFSET);
-        break;        
-    case LOWER_LEFT:
-        range_check = (px >= MIN_PUTTABLE_OFFSET) && (py <= MAX_Y(sp) - MIN_PUTTABLE_OFFSET);
-        break;
- 
-    case LOWER_RIGHT:
-        range_check = (px <= MAX_X(sp) - MIN_PUTTABLE_OFFSET) && (py <= MAX_Y(sp) - MIN_PUTTABLE_OFFSET);
-        break;
-    }
-    dprintf("dir is %d, range_check is %d\n", dir, range_check);
     
-    
+    range_check = is_puttable_range(sp, px, py, dir);
     if (CHECK_NEIGHBOR(p, dir) &&
         range_check &&
         (CELL(*bp, px + ix, py + iy) == OPPOSITE_COLOR(p->color))) {
         dprintf("hagehage %d\n", IS_SCANNABLE_RANGE(px+ix, py+iy, bp));
-        
         getwk = 1;
         for (x = px + ix, y = py + iy;
              IS_SCANNABLE_RANGE(x, y, bp);
              x += dx, y += dy) {
-            dprintf("loop: x = %d, y = %d, color = %d\n",
-                    x, y, CELL(*bp, x, y));
             if (CELL(*bp, x, y) == p->color) {
                 dprintf("found puttable line: %s\n", vecstr[dir]);
                 SET_CANGET(p, dir);
@@ -165,7 +161,6 @@ int check_puttable_dir(struct session *sp, struct put *p, int color, int dir)
     p->gettable += gettable;
     
     return retcode;
-    
 }
 
 
