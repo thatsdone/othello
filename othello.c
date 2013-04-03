@@ -367,6 +367,7 @@ int serve_human(struct session *sp, int player)
         break;
         
     default:
+	break;
     }
    
     return 0;
@@ -841,6 +842,7 @@ struct session *initialize(int argc, char **argv)
         break;
         
     default:
+	break;
             /* never */
     }
     INITQ(sp->player[PLAYER_FIRST].candidate);
